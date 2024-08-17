@@ -6,7 +6,7 @@ using System;
 public class Board
 {
     //All 5 cards to be displayed
-    private int[] cards = new int[5];
+    private Card[] boardCards = new Card[5];
 
     //(Research poker terminology if you don't recognise these words)
     public enum Street
@@ -20,31 +20,31 @@ public class Board
     private Street currentStreet;
 
     //Constructor
-    public Board(int[] cards)
+    public Board(Card[] boardCards)
     {
-        this.cards = cards;
+        this.boardCards = boardCards;
         currentStreet = Street.Preflop;
     }
 
     //Getters
-    public int[] GetFlop()
+    public Card[] GetFlop()
     {
-        int[] flop = new int[3];
+        Card[] flop = new Card[3];
         for (int i = 0; i < 3; i++)
         {
-            flop[i] = cards[i];
+            flop[i] = boardCards[i];
         }
         return flop;
     }
 
-    public int GetTurn()
+    public Card GetTurn()
     {
-        return cards[3];
+        return boardCards[3];
     }
 
-    public int GetRiver()
+    public Card GetRiver()
     {
-        return cards[4];
+        return boardCards[4];
     }
 
     public Street GetCurrentStreet()
