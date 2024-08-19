@@ -6,27 +6,27 @@ public class Card
 {
     public enum Denomination
     {
-        Two = 0,
-        Three = 1,
-        Four = 2,
-        Five = 3,
-        Six = 4,
-        Seven = 5,
-        Eight = 6,
-        Nine = 7,
-        Ten = 8,
-        Jack = 9,
-        Queen = 10,
-        King = 11,
-        Ace = 12
+        Two,
+        Three,
+        Four,
+        Five,
+        Six,
+        Seven,
+        Eight,
+        Nine,
+        Ten,
+        Jack,
+        Queen,
+        King,
+        Ace
     }
 
     public enum Suit
     {
-        Hearts = 0,
-        Diamonds = 1,
-        Clubs = 2,
-        Spades = 3
+        Spades,
+        Diamonds,
+        Clubs,
+        Hearts
     }
 
     private Denomination denomination;

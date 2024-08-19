@@ -15,29 +15,19 @@ public class Player
     private static bool globalRaised = false;
     public enum Position
     {
-        BTN = 0, // Button
-        SB = 1, // Small Blind
-        BB = 2, // Big Blind
-        UTG1 = 3, // First Under The Gun
-        UTG2 = 4, // Second Under The Gun
-        UTG3 = 5, // Third Under The Gun
-        MP1 = 6, // First Middle Position 
-        MP2 = 7, // Second Middle Position
-        HJ = 8, // Hijack
-        CO = 9, // Cutoff
+        BTN, // Button
+        SB, // Small Blind
+        BB, // Big Blind
+        UTG, // Under The Gun
     }
 
-    Position position;
+    private Position position;
     public Player(Pocket pocket, Position position)
     {
         this.pocket = pocket;
         this.position = position;
-        balance = 800;
+        balance = 1000;
         winTally = 0;
-        isFolded = false;
-        isChecked = false;
-        isRaised = false;
-        isBet = false;
     }
 
     public Pocket GetPocket()

@@ -10,6 +10,19 @@ public class GameMaster : MonoBehaviour
 {
     private bool[,] deck = new bool[13, 4];
     private List<Player> players = new List<Player>();
+    private enum Ranking
+    {
+        HighCard,
+        Pair,
+        TwoPair,
+        ThreeOfAKind,
+        Straight,
+        Flush,
+        FullHouse,
+        FourOfAKind,
+        StraightFlush,
+        RoyalFlush,
+    }
     /*
     For card denominations:
     (I'm sorry in advance but there's no way around this)
@@ -70,33 +83,18 @@ public class GameMaster : MonoBehaviour
 
         return uniqueCard;
     }
-    private enum Ranking
-    {
-        HighCard,
-        Pair,
-        TwoPair,
-        ThreeOfAKind,
-        Straight,
-        Flush,
-        FullHouse,
-        FourOfAKind,
-        StraightFlush,
-        RoyalFlush,
-    }
 
     //Start is called before the first frame update
     void Start()
     {
-        Pocket firstPocket = new (GenerateUniqueCard(), GenerateUniqueCard());
-        Player firstPlayer = new (firstPocket, Position.BTN);
-        Player secondPlayer = new(firstPocket, Position.SB);
-        Pocket secondPocket = new(GenerateUniqueCard(), GenerateUniqueCard());
+        Player firstPlayer = new (new(GenerateUniqueCard(), GenerateUniqueCard()), Position.BTN);
+        Player secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), Position.SB);
 
         players.Add(firstPlayer);
         players.Add(secondPlayer);
 
-        Debug.Log(firstPocket.ToString());
-        Debug.Log(secondPocket.ToString());
+        Debug.Log(firstPlayer.GetPocket().ToString());
+        Debug.Log(secondPlayer.GetPocket().ToString());
 
     }
     //Update is called once per frame
