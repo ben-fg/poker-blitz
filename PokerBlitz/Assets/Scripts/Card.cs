@@ -4,31 +4,56 @@ using UnityEngine;
 
 public class Card 
 {
-    private int denomination;
-    private int suit;
+    public enum Denomination
+    {
+        Two = 0,
+        Three = 1,
+        Four = 2,
+        Five = 3,
+        Six = 4,
+        Seven = 5,
+        Eight = 6,
+        Nine = 7,
+        Ten = 8,
+        Jack = 9,
+        Queen = 10,
+        King = 11,
+        Ace = 12
+    }
 
-    public Card(int denomination, int suit)
+    public enum Suit
+    {
+        Hearts = 0,
+        Diamonds = 1,
+        Clubs = 2,
+        Spades = 3
+    }
+
+    private Denomination denomination;
+    private Suit suit;
+
+    public Card(Denomination denomination, Suit suit)
     {
         this.denomination = denomination;
         this.suit = suit;
     }
 
-    public int GetSuit()
+    public Suit GetSuit()
     {
         return suit;
     }
 
-    public void SetSuit(int suit)
+    public void SetSuit(Suit suit)
     {
         this.suit = suit;
     }
 
-    public int GetDenomination()
+    public Denomination GetDenomination()
     {
         return denomination;
     }
 
-    public void SetDenomination(int denomination)
+    public void SetDenomination(Denomination denomination)
     {
         this.denomination = denomination;
     }

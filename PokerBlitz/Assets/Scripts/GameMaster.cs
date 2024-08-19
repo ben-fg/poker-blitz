@@ -3,10 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using static Card;
+using static Player;
 
 public class GameMaster : MonoBehaviour
 {
     private bool[,] deck = new bool[13, 4];
+    private List<Player> players = new List<Player>();
     /*
     For card denominations:
     (I'm sorry in advance but there's no way around this)
@@ -34,41 +37,36 @@ public class GameMaster : MonoBehaviour
     */
 
     // Generates a random card denomination (0-12) and suit (0-3)
-    private void GenerateRandomCard(out int denomination, out int suit)
-    {
-        denomination = UnityEngine.Random.Range(0, 13);
-        suit = UnityEngine.Random.Range(0, 4);
-    }
+    /* private void GenerateRandomCard(out int denomination, out int suit)
+     {
+         denomination = UnityEngine.Random.Range(0, 13);
+         suit = UnityEngine.Random.Range(0, 4);
+     }*/
 
     // Generates a unique card
     private Card GenerateUniqueCard()
     {
         int denomination;
         int suit;
-        int attempts = 0;
-        const int maxAttempts = 52;
+        
 
         // Keep generating random cards until a unique one is found or the max attempts is reached
         do
         {
-            GenerateRandomCard(out denomination, out suit);
-            attempts++;
-        }
-        while (deck[denomination, suit] && attempts < maxAttempts);
+            denomination = UnityEngine.Random.Range(0, 13);
+            suit = UnityEngine.Random.Range(0, 4);
 
-        // If maxAttempts is reached, log a warning indicating that all cards have been generated
-        if (attempts >= maxAttempts)
-        {
-            Debug.LogWarning("All cards have been generated.");
-            
         }
+        while (deck[denomination, suit]);
 
         // Mark the card as used in the deck
         deck[denomination, suit] = true;
 
-        Card uniqueCard = new Card(denomination, suit);
+        Denomination cardDenomination = (Denomination)denomination;
+        Suit cardSuit = (Suit)suit;
+        Card uniqueCard = new Card(cardDenomination, cardSuit);
 
-        Debug.Log($"Generated unique card: Denomination {denomination}, Suit {suit}");
+        Debug.Log($"Generated unique card: Denomination {cardDenomination}, Suit {cardSuit}");
 
         return uniqueCard;
     }
@@ -89,17 +87,22 @@ public class GameMaster : MonoBehaviour
     //Start is called before the first frame update
     void Start()
     {
-        //For now, simply deal to one player (pocket) and the board
-        Pocket firstPocket = new Pocket (GenerateUniqueCard(), GenerateUniqueCard());
-       
-        Debug.Log("Code is running!");
+        Pocket firstPocket = new (GenerateUniqueCard(), GenerateUniqueCard());
+        Player firstPlayer = new (firstPocket, Position.BTN);
+        Player secondPlayer = new(firstPocket, Position.SB);
+        Pocket secondPocket = new(GenerateUniqueCard(), GenerateUniqueCard());
+
+        players.Add(firstPlayer);
+        players.Add(secondPlayer);
+
         Debug.Log(firstPocket.ToString());
-        
+        Debug.Log(secondPocket.ToString());
+
     }
     //Update is called once per frame
     void Update()
     {
-        
+       
     }
 
     private Ranking DetermineRank(Pocket pocket, Board board)
