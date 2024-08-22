@@ -68,7 +68,6 @@ public class GameMaster : MonoBehaviour
         {
             denomination = UnityEngine.Random.Range(0, 13);
             suit = UnityEngine.Random.Range(0, 4);
-
         }
         while (deck[denomination, suit]);
 
