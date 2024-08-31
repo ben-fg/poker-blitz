@@ -38,6 +38,24 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: B3
+    uniqueID: 2200396057
+    locked: 0
+  - name: B2
+    uniqueID: 3409057657
+    locked: 0
+  - name: B1
+    uniqueID: 3885291633
+    locked: 0
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: T1
+    uniqueID: 3462076631
+    locked: 0
+  - name: T2
+    uniqueID: 576412693
+    locked: 0
+  - name: T3
+    uniqueID: 31406333
     locked: 0

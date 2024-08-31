@@ -40,7 +40,7 @@ namespace TMPro.Examples
         {
             if (Motion == MotionType.Rotation)
             {
-                m_transform.Rotate(0, SpinSpeed * Time.deltaTime, 0);
+                m_transform.Rotate(0, 0, SpinSpeed * Time.deltaTime);
             }
             else if (Motion == MotionType.BackAndForth)
             {
