@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
+using UnityEngine;
 
 public class Player 
 {
@@ -8,9 +10,12 @@ public class Player
     private int winTally;
     private bool isFolded;
     private bool isChecked;
-    private bool isRaised;
-    private bool isBet;
+    private int raise;
+    private int bet;
+    private static int previousRaise = 0;
+    private static int callCounter= 0;
     private static bool globalRaised = false;
+    private static int pot = 0;
     public enum Position
     {
         BTN, // Button
@@ -88,41 +93,109 @@ public class Player
         return isChecked;
     }
 
-    public void RaiseBet()
+    public void Blinds(int raise)
     {
-        isRaised = true;
+        this.raise = raise;
+        if (raise <= balance)
+        {
+            pot += raise;
+            balance -= raise;
+            callCounter = 0;
+            previousRaise = raise;
+
+            Debug.Log($" blind by {raise}. Current balance: {balance}Current pot: {pot}");
+        }
+        else
+        {
+            Debug.Log($" You only have {balance}. Get your bread up lil bro");
+        }
     }
 
-    public bool IsRaised()
+    public void Raise(int raise)
     {
-        return isRaised;
+        this.raise = raise;
+        if (raise <= balance)
+        {
+            pot += raise;
+            balance -= raise;
+            globalRaised = true;
+            callCounter = 0;
+            previousRaise = raise;
+
+            Debug.Log($" raised by {raise}. Current balance: {balance}Current pot: {pot}");
+        }
+        else
+        {
+            Debug.Log($" You only have {balance}. Get your bread up lil bro");
+        }
+
     }
 
-    public void Bet()
+    public int AmountRaised()
     {
-        isBet = true;
+        return raise;
     }
 
-    public bool IsBet()
+    public static int GetPreviousRaise()
     {
-        return isBet;
+        return previousRaise;
     }
 
-    public void GlobalRaised()
+    public void Call()
     {
-        globalRaised = true;
+        if (previousRaise <= balance)
+        {
+            pot += previousRaise;
+            balance -= previousRaise;
+            callCounter++;
+     
+            Debug.Log($" Matched {previousRaise}. Current balance: {balance}Current pot: {pot}");
+        }
+        else
+        {
+            Debug.Log($" You only have {balance}. Get your bread up lil bro");
+        }
     }
 
-    public bool IsGlobalRaied()
+    public static int GetCallCounter()
+    {
+        return callCounter;
+    }
+
+    public void Bet(int bet)
+    {
+        this.bet = bet; 
+    }
+
+    public int AmountBet()
+    {
+        return bet;
+    }
+
+    public static void GlobalRaised()
+    {
+        globalRaised = false;
+    }
+
+    public static bool IsGlobalRaised()
     {
         return globalRaised;
+    }
+
+    public static void SetPot(int pot)
+    {
+        Player.pot = pot;
+    }
+
+    public static int GetPot()
+    {
+        return pot;
     }
 
     public void Reset()
     {
         isChecked = false;
-        isRaised = false;
-        isBet = false;
-        globalRaised = false;
+        raise = 0;
+        bet = 0;
     }
 }

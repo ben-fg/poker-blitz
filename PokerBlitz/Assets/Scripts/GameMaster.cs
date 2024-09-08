@@ -2,12 +2,20 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using UnityEngine.UI;
+
 
 public class GameMaster : MonoBehaviour
 {
     private bool[,] deck = new bool[13, 4];
     private List<Player> players = new List<Player>();
+    private int globalMatched;
+    [SerializeField] private InputField testBox;
+    private int activePlayerIndex = 1;
+    private bool round = false;
+
     private enum Ranking
     {
         HighCard,
@@ -47,13 +55,6 @@ public class GameMaster : MonoBehaviour
     E.g. King of hearts == [11,3]
     */
 
-    // Generates a random card denomination (0-12) and suit (0-3)
-    /* private void GenerateRandomCard(out int denomination, out int suit)
-     {
-         denomination = UnityEngine.Random.Range(0, 13);
-         suit = UnityEngine.Random.Range(0, 4);
-     }*/
-
     // Generates a unique card
     private Card GenerateUniqueCard()
     {
@@ -86,18 +87,87 @@ public class GameMaster : MonoBehaviour
     {
         Player firstPlayer = new (new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.BTN);
         Player secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.SB);
+        Player thirdPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.BB);
+        Player fourthPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.UTG);
 
         players.Add(firstPlayer);
         players.Add(secondPlayer);
+        players.Add(thirdPlayer);
+        players.Add(fourthPlayer);
 
         Debug.Log(firstPlayer.GetPocket().ToString());
         Debug.Log(secondPlayer.GetPocket().ToString());
+        Debug.Log(thirdPlayer.GetPocket().ToString());
+        Debug.Log(fourthPlayer.GetPocket().ToString());
 
     }
+
     //Update is called once per frame
     void Update()
     {
-       
+        Player currentPlayer = players[activePlayerIndex];
+        if (!round)
+        {
+            do
+            {
+                currentPlayer.Raise(25);
+                activePlayerIndex++;
+                currentPlayer = players[activePlayerIndex];
+                currentPlayer.Raise(50);
+                Debug.Log(" blinds played");
+
+            }
+            while (activePlayerIndex != 2);
+
+            activePlayerIndex = 3;
+            round = true;
+        }
+        
+
+        if (Player.IsGlobalRaised())
+        {
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                currentPlayer.Raise(Int32.Parse(testBox.text));
+
+            }
+            else if (Input.GetKeyDown(KeyCode.C))
+            {
+                currentPlayer.Call();
+                Debug.Log($"player {activePlayerIndex+1}");
+            }
+            else if (Input.GetKeyDown(KeyCode.F))
+            {
+                currentPlayer.Fold();
+            }
+        }
+        else
+        {
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                currentPlayer.Raise(Int32.Parse(testBox.text));
+
+            }
+            else if (Input.GetKeyDown(KeyCode.K))
+            {
+                currentPlayer.Check();
+            }
+            else if (Input.GetKeyDown(KeyCode.F))
+            {
+                currentPlayer.Fold();
+            }
+        }
+        
+        if (Player.GetCallCounter() == players.Count)
+        {
+            Player.GlobalRaised();
+        }
+        if (Input.GetKeyDown(KeyCode.N))
+        {
+            activePlayerIndex = (activePlayerIndex + 1) % players.Count;
+            Debug.Log($"Current player is now Player {activePlayerIndex+1}");
+        }
+
     }
 
     private Ranking DetermineRank(Pocket pocket, Board board)
