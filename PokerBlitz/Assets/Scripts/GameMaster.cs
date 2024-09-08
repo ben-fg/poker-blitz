@@ -3,8 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
-using static Card;
-using static Player;
 
 public class GameMaster : MonoBehaviour
 {
@@ -74,8 +72,8 @@ public class GameMaster : MonoBehaviour
         // Mark the card as used in the deck
         deck[denomination, suit] = true;
 
-        Denomination cardDenomination = (Denomination)denomination;
-        Suit cardSuit = (Suit)suit;
+        Card.Denomination cardDenomination = (Card.Denomination)denomination;
+        Card.Suit cardSuit = (Card.Suit)suit;
         Card uniqueCard = new Card(cardDenomination, cardSuit);
 
         Debug.Log($"Generated unique card: Denomination {cardDenomination}, Suit {cardSuit}");
@@ -86,8 +84,8 @@ public class GameMaster : MonoBehaviour
     //Start is called before the first frame update
     void Start()
     {
-        Player firstPlayer = new (new(GenerateUniqueCard(), GenerateUniqueCard()), Position.BTN);
-        Player secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), Position.SB);
+        Player firstPlayer = new (new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.BTN);
+        Player secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.SB);
 
         players.Add(firstPlayer);
         players.Add(secondPlayer);

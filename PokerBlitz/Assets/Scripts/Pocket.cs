@@ -3,15 +3,11 @@ using System.Collections.Generic;
 
 public class Pocket
 {
-    private Card card1;
-    private Card card2;
     private Card[] pocketCards = new Card[2];
     
 
     public Pocket(Card card1, Card card2)
     {
-        this.card1 = card1;
-        this.card2 = card2;
         pocketCards[0] = card1;
         pocketCards[1] = card2;
     }
