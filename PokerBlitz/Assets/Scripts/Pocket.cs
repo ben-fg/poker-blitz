@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using static Card;
 
 public class Pocket
 {
@@ -29,8 +28,8 @@ public class Pocket
 
         for (int i = 0; i < pocketCards.Length; i++)
         {
-            Suit suit = pocketCards[i].GetSuit();
-            Denomination denomination = pocketCards[i].GetDenomination();
+            Card.Suit suit = pocketCards[i].GetSuit();
+            Card.Denomination denomination = pocketCards[i].GetDenomination();
 
             result += $"{denomination} of {suit}";
 
