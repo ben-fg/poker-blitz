@@ -20,19 +20,6 @@ public class GameMaster : MonoBehaviour
     private const int BigBlind = 50;
     private Player currentPlayer;
 
-    private enum Ranking
-    {
-        HighCard,
-        Pair,
-        TwoPair,
-        ThreeOfAKind,
-        Straight,
-        Flush,
-        FullHouse,
-        FourOfAKind,
-        StraightFlush,
-        RoyalFlush,
-    }
     /*
     For card denominations:
     (I'm sorry in advance but there's no way around this)
