@@ -68,8 +68,8 @@ public class GameMaster : MonoBehaviour
         // Keep generating random cards until a unique one is found or the max attempts is reached
         do
         {
-            denomination = UnityEngine.Random.Range(0, 13);
-            suit = UnityEngine.Random.Range(0, 4);
+            denomination = UnityEngine.Random.Range(1, 14);
+            suit = UnityEngine.Random.Range(1, 4);
         }
         while (deck[denomination, suit]);
 
@@ -260,7 +260,7 @@ public class GameMaster : MonoBehaviour
         }
     }
 
-    private Ranking DetermineRank(Pocket pocket, Board board)
+   /* private Ranking DetermineRank(Pocket pocket, Board board)
     {
         // make sure to take into account the street of the board when retrieving the cards
         // if more than 5 cards, find best hand then find the rank
@@ -272,10 +272,10 @@ public class GameMaster : MonoBehaviour
         tempPlayerHand.AddRange(board.GetFlop());
         
         
-        /* cards are stored as words, so this stores the card in their number counterpart
+        *//* cards are stored as words, so this stores the card in their number counterpart
         eg Two of Spades = [2,1]
            King of Hearts = [13,4] 
-        */
+        *//*
         List<(int denomination, int suit)> playerHand = new List<(int, int)>{};
 
         foreach (Card card in tempPlayerHand)
@@ -284,9 +284,9 @@ public class GameMaster : MonoBehaviour
         }
 
 
-        /* sort cards from highest rank to lowest rank
+        *//* sort cards from highest rank to lowest rank
             example of sortedHand = [9,4] [7,2] [7,1] [5,3] [5,2] 
-        */
+        *//*
         var sortedHand = playerHand.OrderByDescending(card => card.suit).ToList();
 
         
@@ -306,9 +306,9 @@ public class GameMaster : MonoBehaviour
 
 
 
-        /* here we count the number of occurrences of each rank, which helps us determine
+        *//* here we count the number of occurrences of each rank, which helps us determine
             whether the hand is a four of a kind, three of a kind, pair.. etc
-        */
+        *//*
         Dictionary<int, int> denominationCounts = new Dictionary<int, int>();
 
         foreach (var (x, y) in sortedHand)
@@ -323,7 +323,7 @@ public class GameMaster : MonoBehaviour
             }
         }
 
-        /* from previous example dictionary will be 9:1, 7:2, 5:2
+        *//* from previous example dictionary will be 9:1, 7:2, 5:2
             converts occurrences values into list [1,2,2]
             sorts highest to lowest  [2,2,1]
             possibilites: 
@@ -352,7 +352,7 @@ public class GameMaster : MonoBehaviour
         if (denominationList.SequenceEqual(new List<int>{2,1,1,1})) return Ranking.Pair;
         
         return Ranking.HighCard;
-        */
+        *//*
         return null;
-    }
+    }*/
 }

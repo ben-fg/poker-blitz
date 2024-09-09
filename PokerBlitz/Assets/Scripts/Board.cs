@@ -62,7 +62,7 @@ public class Board
 
     public override string ToString()
     {
-        string result = "Board Cards:\n";
+        string result = "Board Cards:";
 
         // Display Flop
         if (currentStreet == Street.Preflop || currentStreet == Street.Flop || currentStreet == Street.Turn || currentStreet == Street.River)
