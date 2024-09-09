@@ -132,22 +132,24 @@ public class GameMaster : MonoBehaviour
 
             // Add all players to an active players list 
             // Play the blinds
-            if (board.GetCurrentStreet().Equals(Board.Street.Preflop))
-            {
-                activePlayers.AddRange(players);
-                currentPlayer = activePlayers[activePlayerIndex];
-                currentPlayer.Raise(SmallBlind);
-                activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
-                currentPlayer = activePlayers[activePlayerIndex];
-                currentPlayer.Raise(BigBlind);
-                activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
-                currentPlayer = activePlayers[activePlayerIndex];
-                Debug.Log(" blinds played");
-                
-            }
+            activePlayers.AddRange(players);
+            currentPlayer = activePlayers[activePlayerIndex];
+            //currentPlayer.Raise(SmallBlind);
+            activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
+            currentPlayer = activePlayers[activePlayerIndex];
+            currentPlayer.Raise(BigBlind);
+            activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
+            currentPlayer = activePlayers[activePlayerIndex];
+            Debug.Log(" blinds played");
             positionEnum++;
             isPreFlop = false;
             isFlop = true;
+            if (activePlayerIndex == 1)
+            {
+                currentPlayer.SetBalance(currentPlayer.GetBalance() - 25);
+                Player.SetPot(Player.GetPot() + 25);
+            }
+            Player.DecreaseCallCounter();
         }
 
         
@@ -157,12 +159,6 @@ public class GameMaster : MonoBehaviour
             // It checks if it is true so it would only show the flop once
             if (isFlop)
             {
-                /*if (activePlayerIndex == 1)
-                {
-
-                    currentPlayer.SetBalance(currentPlayer.GetBalance()-25);
-                    Player.SetPot(Player.GetPot()+25);
-                }*/
                 Debug.Log("I am flopping");
                 
                 // Shows the flop cards
@@ -342,6 +338,7 @@ public class GameMaster : MonoBehaviour
             strongest to weakest
         */
 
+        /*
         List<int> denominationList = denominationCounts.Values.ToList();
         denominationList = denominationList.OrderByDescending(n => n).ToList();
 
@@ -355,5 +352,7 @@ public class GameMaster : MonoBehaviour
         if (denominationList.SequenceEqual(new List<int>{2,1,1,1})) return Ranking.Pair;
         
         return Ranking.HighCard;
+        */
+        return null;
     }
 }

@@ -158,6 +158,11 @@ public class Player
         }
     }
 
+    public static void DecreaseCallCounter()
+    {
+        callCounter--;
+    }
+
     public static int GetCallCounter()
     {
         return callCounter;
