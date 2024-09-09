@@ -10,14 +10,26 @@ using UnityEngine.UI;
 
 public class GameMaster : MonoBehaviour
 {
+    private Player firstPlayer;
+    private Player secondPlayer;
+    private Player thirdPlayer;
+    private Player fourthPlayer;
     private bool[,] deck = new bool[13, 4];
     private List<Player> players = new List<Player>();
+    private List<Player> activePlayers = new List<Player>();
+    private Card[] boardCards = new Card[5];
+    private Board board;
+    
     private int globalMatched;
     [SerializeField] private InputField testBox;
     private int activePlayerIndex = 1;
-    private bool round = false;
+    private bool isPreFlop = true;
+    private bool isFlop = false;
+    private bool isTurn = false;
+    private bool isRiver = false;
     private const int SmallBlind = 25;
     private const int BigBlind = 50;
+    private int positionEnum = 0;
     private Player currentPlayer;
 
     /*
@@ -68,7 +80,7 @@ public class GameMaster : MonoBehaviour
         Card.Suit cardSuit = (Card.Suit)suit;
         Card uniqueCard = new Card(cardDenomination, cardSuit);
 
-        Debug.Log($"Generated unique card: Denomination {cardDenomination}, Suit {cardSuit}");
+        /*Debug.Log($"Generated unique card: Denomination {cardDenomination}, Suit {cardSuit}");*/
 
         return uniqueCard;
     }
@@ -76,62 +88,179 @@ public class GameMaster : MonoBehaviour
     //Start is called before the first frame update
     void Start()
     {
-        Player firstPlayer = new (new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.BTN);
-        Player secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.SB);
-        Player thirdPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.BB);
-        Player fourthPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), Player.Position.UTG);
 
-        players.Add(firstPlayer);
-        players.Add(secondPlayer);
-        players.Add(thirdPlayer);
-        players.Add(fourthPlayer);
+        
 
-        Debug.Log(firstPlayer.GetPocket().ToString());
-        Debug.Log(secondPlayer.GetPocket().ToString());
-        Debug.Log(thirdPlayer.GetPocket().ToString());
-        Debug.Log(fourthPlayer.GetPocket().ToString());
-
-        currentPlayer = players[activePlayerIndex];
-        currentPlayer.Raise(SmallBlind);
-        activePlayerIndex++;
-        currentPlayer = players[activePlayerIndex];
-        currentPlayer.Raise(BigBlind);
-        Debug.Log(" blinds played");
+        
     }
 
     //Update is called once per frame
     void Update()
     {
+        // Checks whether preflop is true to start a new round
+        if (isPreFlop)
+        {
+            // Makes all the cards available 
+            deck = new bool[13, 4];
+
+            // New cards and positions
+            // The positionEnum is used so that ypu could alternate the positions every round 
+            firstPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (Player.Position)((0 + positionEnum) % 4));
+            secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (Player.Position)((1 + positionEnum) % 4));
+            thirdPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (Player.Position)((2 + positionEnum) % 4));
+            fourthPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (Player.Position)((3 + positionEnum) % 4));
+
+            // Added all to a list
+            players.Add(firstPlayer);
+            players.Add(secondPlayer);
+            players.Add(thirdPlayer);
+            players.Add(fourthPlayer);
+
+            // Shows on screen the Pocket cards for every player
+            Debug.Log(firstPlayer.GetPocket().ToString());
+            Debug.Log(secondPlayer.GetPocket().ToString());
+            Debug.Log(thirdPlayer.GetPocket().ToString());
+            Debug.Log(fourthPlayer.GetPocket().ToString());
+
+            // Generates cards for the board
+            for (int i = 0; i < 5; i++)
+            {
+                boardCards[i] = GenerateUniqueCard();
+            }
+
+            board = new(boardCards);
+
+            // Add all players to an active players list 
+            // Play the blinds
+            if (board.GetCurrentStreet().Equals(Board.Street.Preflop))
+            {
+                activePlayers.AddRange(players);
+                currentPlayer = activePlayers[activePlayerIndex];
+                currentPlayer.Raise(SmallBlind);
+                activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
+                currentPlayer = activePlayers[activePlayerIndex];
+                currentPlayer.Raise(BigBlind);
+                activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
+                currentPlayer = activePlayers[activePlayerIndex];
+                Debug.Log(" blinds played");
+                
+            }
+            positionEnum++;
+            isPreFlop = false;
+            isFlop = true;
+        }
+
+        
+
+        if (board.GetCurrentStreet().Equals(Board.Street.Flop))
+        {
+            // It checks if it is true so it would only show the flop once
+            if (isFlop)
+            {
+                /*if (activePlayerIndex == 1)
+                {
+
+                    currentPlayer.SetBalance(currentPlayer.GetBalance()-25);
+                    Player.SetPot(Player.GetPot()+25);
+                }*/
+                Debug.Log("I am flopping");
+                
+                // Shows the flop cards
+                Debug.Log(board.ToString());
+
+                // Now isTurn is true but cannot access the turn cards unless the street is incremented
+                isFlop = false;
+                isTurn = true;
+            }
+        }
+        else if (board.GetCurrentStreet().Equals(Board.Street.Turn))
+        {
+            // It checks if it is true so it would only show the turn once
+            if (isTurn)
+            {
+                Debug.Log("I am turning");
+                Debug.Log(board.ToString());
+                isTurn = false;
+                isRiver = true;
+            }
+        }
+        else if (board.GetCurrentStreet().Equals(Board.Street.River))
+        {
+            // It checks if it is true so it would only show the river once
+            if (isRiver)
+            {
+                Debug.Log("I am rivering");
+                Debug.Log(board.ToString());
+                isRiver = false;
+            }
+        }
+
+
         if (Input.GetKeyDown(KeyCode.R))
         {
+            // Get the raised amount from the text box
+            // Move to the next player
             currentPlayer.Raise(int.Parse(testBox.text));
-            activePlayerIndex = (activePlayerIndex + 1) % players.Count;
+            Debug.Log($" Player {activePlayerIndex + 1} raised by {currentPlayer.AmountRaised()}. Current balance: {currentPlayer.GetBalance()} Current pot: {Player.GetPot()}");
+            activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
             Debug.Log($"Current player is now Player {activePlayerIndex + 1}");
+            currentPlayer = activePlayers[activePlayerIndex];
         }
         else if (Input.GetKeyDown(KeyCode.C))
         {
+            // If someone raised, and you pressed C, you will Call 
             if (Player.IsGlobalRaised())
             {
-                currentPlayer.Check();
+                currentPlayer.Call();
+                Debug.Log($"Previous raise; {Player.GetPreviousRaise()}");
+                Debug.Log($" Player {activePlayerIndex + 1} called {Player.GetPreviousRaise()}. Current balance: {currentPlayer.GetBalance()} Current pot: {Player.GetPot()}");
+
+                
+                currentPlayer = activePlayers[activePlayerIndex];
             }
             else
             {
-                currentPlayer.Call();
-                Debug.Log($"player {activePlayerIndex + 1}");
+                currentPlayer.Check();
+                Debug.Log($" Player {activePlayerIndex + 1} checked. Current balance: {currentPlayer.GetBalance()} Current pot: {Player.GetPot()}");
             }
-            activePlayerIndex = (activePlayerIndex + 1) % players.Count;
+
+            // Move to the next player
+            activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
             Debug.Log($"Current player is now Player {activePlayerIndex + 1}");
+            currentPlayer = activePlayers[activePlayerIndex];
         }
         else if (Input.GetKeyDown(KeyCode.F))
         {
             currentPlayer.Fold();
-            activePlayerIndex = (activePlayerIndex + 1) % players.Count;
+            Debug.Log($" Player {activePlayerIndex + 1} folded. Current balance: {currentPlayer.GetBalance()} Current pot: {Player.GetPot()}");
+            activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
             Debug.Log($"Current player is now Player {activePlayerIndex + 1}");
+            currentPlayer = activePlayers[activePlayerIndex];
+        }
+
+
+        // If the 3 people called or 4 peole checked, then isGlobalRaised flag and the counter are reset to false and 0
+        if (Player.GetCallCounter() == (activePlayers.Count - 1) || Player.GetCheckCounter() == activePlayers.Count)
+        {
+            Player.ResetGlobals();
+
+            // However if it is also on the showdown, that means the game has ended and a new hand is dealt
+            if (board.GetCurrentStreet().Equals(Board.Street.Showdown))
+            {
+                isPreFlop = true;
+            }
+            else
+            {
+                board.IncrementStreet();
+            }
+            
         }
         
-        if (Player.GetCallCounter() == players.Count)
+        if (Player.GetFoldCounter() == (players.Count-1))
         {
-            Player.GlobalRaised();
+            Player.ResetGlobals();
+            isPreFlop = true;
+            positionEnum++;
         }
     }
 

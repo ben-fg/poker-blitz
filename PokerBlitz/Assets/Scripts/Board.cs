@@ -59,4 +59,37 @@ public class Board
         int nextStreetIndex = Array.IndexOf(Enum.GetValues(typeof(Street)), currentStreet) + 1;
         currentStreet = (Street)Enum.GetValues(typeof(Street)).GetValue(nextStreetIndex);
     }
+
+    public override string ToString()
+    {
+        string result = "Board Cards:\n";
+
+        // Display Flop
+        if (currentStreet == Street.Preflop || currentStreet == Street.Flop || currentStreet == Street.Turn || currentStreet == Street.River)
+        {
+            result += "Flop: ";
+            for (int i = 0; i < 3; i++)
+            {
+                Card card = boardCards[i];
+                result += $"{card.GetDenomination()} of {card.GetSuit()}";
+                if (i < 2) result += ", ";
+            }
+            
+        }
+        // Display Turn
+        if (currentStreet == Street.Turn || currentStreet == Street.River)
+        {
+            Card turn = boardCards[3];
+            result += $" Turn: {turn.GetDenomination()} of {turn.GetSuit()} ";
+        }
+        // Display River
+        if (currentStreet == Street.River)
+        {
+            Card river = boardCards[4];
+            result += $"River: {river.GetDenomination()} of {river.GetSuit()}";
+        }
+
+        return result;
+    }
+
 }

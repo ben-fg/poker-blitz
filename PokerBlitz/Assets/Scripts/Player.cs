@@ -14,6 +14,8 @@ public class Player
     private int bet;
     private static int previousRaise = 0;
     private static int callCounter = 0;
+    private static int checkCounter = 0;
+    private static int foldCounter = 0;
     private static bool globalRaised = false;
     private static int pot = 0;
     public enum Position
@@ -76,6 +78,7 @@ public class Player
     public void Fold()
     {
         isFolded = true;
+        foldCounter++;
     }
 
     public bool IsFolded()
@@ -86,6 +89,7 @@ public class Player
     public void Check()
     {
         isChecked = true;
+        checkCounter++;
     }
 
     public bool IsChecked()
@@ -122,7 +126,6 @@ public class Player
             callCounter = 0;
             previousRaise = raise;
 
-            Debug.Log($" raised by {raise}. Current balance: {balance}Current pot: {pot}");
         }
         else
         {
@@ -148,8 +151,6 @@ public class Player
             pot += previousRaise;
             balance -= previousRaise;
             callCounter++;
-     
-            Debug.Log($" Matched {previousRaise}. Current balance: {balance}Current pot: {pot}");
         }
         else
         {
@@ -162,6 +163,16 @@ public class Player
         return callCounter;
     }
 
+    public static int GetFoldCounter()
+    {
+        return foldCounter;
+    }
+
+    public static int GetCheckCounter()
+    {
+        return checkCounter;
+    }
+
     public void Bet(int bet)
     {
         this.bet = bet; 
@@ -172,9 +183,12 @@ public class Player
         return bet;
     }
 
-    public static void GlobalRaised()
+    public static void ResetGlobals()
     {
         globalRaised = false;
+        callCounter = 0;
+        checkCounter = 0;
+        foldCounter = 0;
     }
 
     public static bool IsGlobalRaised()
