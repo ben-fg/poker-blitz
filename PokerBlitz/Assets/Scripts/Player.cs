@@ -13,7 +13,7 @@ public class Player
     private int raise;
     private int bet;
     private static int previousRaise = 0;
-    private static int callCounter= 0;
+    private static int callCounter = 0;
     private static bool globalRaised = false;
     private static int pot = 0;
     public enum Position

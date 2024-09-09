@@ -15,6 +15,9 @@ public class GameMaster : MonoBehaviour
     [SerializeField] private InputField testBox;
     private int activePlayerIndex = 1;
     private bool round = false;
+    private const int SmallBlind = 25;
+    private const int BigBlind = 50;
+    private Player currentPlayer;
 
     private enum Ranking
     {
@@ -100,74 +103,48 @@ public class GameMaster : MonoBehaviour
         Debug.Log(thirdPlayer.GetPocket().ToString());
         Debug.Log(fourthPlayer.GetPocket().ToString());
 
+        currentPlayer = players[activePlayerIndex];
+        currentPlayer.Raise(SmallBlind);
+        activePlayerIndex++;
+        currentPlayer = players[activePlayerIndex];
+        currentPlayer.Raise(BigBlind);
+        Debug.Log(" blinds played");
     }
 
     //Update is called once per frame
     void Update()
     {
-        Player currentPlayer = players[activePlayerIndex];
-        if (!round)
+        if (Input.GetKeyDown(KeyCode.R))
         {
-            do
-            {
-                currentPlayer.Raise(25);
-                activePlayerIndex++;
-                currentPlayer = players[activePlayerIndex];
-                currentPlayer.Raise(50);
-                Debug.Log(" blinds played");
-
-            }
-            while (activePlayerIndex != 2);
-
-            activePlayerIndex = 3;
-            round = true;
+            currentPlayer.Raise(int.Parse(testBox.text));
+            activePlayerIndex = (activePlayerIndex + 1) % players.Count;
+            Debug.Log($"Current player is now Player {activePlayerIndex + 1}");
         }
-        
-
-        if (Player.IsGlobalRaised())
+        else if (Input.GetKeyDown(KeyCode.C))
         {
-            if (Input.GetKeyDown(KeyCode.R))
-            {
-                currentPlayer.Raise(Int32.Parse(testBox.text));
-
-            }
-            else if (Input.GetKeyDown(KeyCode.C))
-            {
-                currentPlayer.Call();
-                Debug.Log($"player {activePlayerIndex+1}");
-            }
-            else if (Input.GetKeyDown(KeyCode.F))
-            {
-                currentPlayer.Fold();
-            }
-        }
-        else
-        {
-            if (Input.GetKeyDown(KeyCode.R))
-            {
-                currentPlayer.Raise(Int32.Parse(testBox.text));
-
-            }
-            else if (Input.GetKeyDown(KeyCode.K))
+            if (Player.IsGlobalRaised())
             {
                 currentPlayer.Check();
             }
-            else if (Input.GetKeyDown(KeyCode.F))
+            else
             {
-                currentPlayer.Fold();
+                currentPlayer.Call();
+                Debug.Log($"player {activePlayerIndex + 1}");
             }
+            activePlayerIndex = (activePlayerIndex + 1) % players.Count;
+            Debug.Log($"Current player is now Player {activePlayerIndex + 1}");
+        }
+        else if (Input.GetKeyDown(KeyCode.F))
+        {
+            currentPlayer.Fold();
+            activePlayerIndex = (activePlayerIndex + 1) % players.Count;
+            Debug.Log($"Current player is now Player {activePlayerIndex + 1}");
         }
         
         if (Player.GetCallCounter() == players.Count)
         {
             Player.GlobalRaised();
         }
-        if (Input.GetKeyDown(KeyCode.N))
-        {
-            activePlayerIndex = (activePlayerIndex + 1) % players.Count;
-            Debug.Log($"Current player is now Player {activePlayerIndex+1}");
-        }
-
     }
 
     private Ranking DetermineRank(Pocket pocket, Board board)
