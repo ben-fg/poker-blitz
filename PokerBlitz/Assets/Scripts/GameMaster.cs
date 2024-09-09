@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEditor.Experimental.GraphView;
@@ -150,6 +151,77 @@ public class GameMaster : MonoBehaviour
     private Ranking DetermineRank(Pocket pocket, Board board)
     {
         //Make sure to take into account the street of the board when retrieving the cards
+        //if more than 5 cards, find best hand then find the rank
+
+        //assuming 5 cards for now
+        List<Card> tempPlayerHand = new List<Card>(pocket.GetCards());
+        tempPlayerHand.AddRange(board.GetFlop());
+        //Debug.Log(playerHand.ToString());
+        
+        List<(int denomination, int suit)> playerHand = new List<(int, int)>{};
+
+        foreach (Card card in tempPlayerHand)
+        {
+            playerHand.Add(((int)card.GetDenomination(), (int)card.GetSuit()));
+        }
+
+        var sortedHand = playerHand.OrderByDescending(card => card.suit).ToList();
+
+        // example sortedHand = [9,4] [7,2] [7,1] [5,3] [5,2]
+
+        bool isFlush = true;
+
+        // implement checking for both broadway and baby straights
+        // can also check if straight if difference between high and low card is 4
+        bool isStraight = false;
+
+        int flushSuit = sortedHand[0].Item2;
+        int straightDenomination = sortedHand[0].Item1;
+
+        foreach (var card in sortedHand)
+        {
+            if (card.Item2 != flushSuit) isFlush = false;
+            if (card.Item1 != straightDenomination) isStraight = false;
+            straightDenomination--;
+        }
+
+
+        Dictionary<int, int> denominationCounts = new Dictionary<int, int>();
+
+        foreach (var (x, y) in sortedHand)
+        {
+            if (denominationCounts.ContainsKey(x))
+            {
+                denominationCounts[x]++;
+            }
+            else
+            {
+                denominationCounts[x] = 1;
+            }
+        }
+
+        // dictionary will be 9:1, 7:2 5:2
+        // take values into list [1,2,2]
+        // sort highest to lowest  [2,2,1]
+        /* possibilites: 
+        [4,1] (four of a kind)
+        [3,2] (full house)
+        [3,1,1] (three of a kind)
+        [2,2,1] (two pair)
+        [2,1,1,1] (pair) */
+
+        List<int> denominationList = denominationCounts.Values.ToList();
+        denominationList = denominationList.OrderByDescending(n => n).ToList();
+
+        if (isFlush && isStraight)                                  return Ranking.StraightFlush;
+        if (denominationList.SequenceEqual(new List<int>{4,1}))     return Ranking.FourOfAKind;
+        if (denominationList.SequenceEqual(new List<int>{3,2}))     return Ranking.FullHouse;
+        if (isFlush)                                                return Ranking.Flush;
+        if (isStraight)                                             return Ranking.Straight;
+        if (denominationList.SequenceEqual(new List<int>{3,1,1}))   return Ranking.ThreeOfAKind;
+        if (denominationList.SequenceEqual(new List<int>{2,2,1}))   return Ranking.TwoPair;
+        if (denominationList.SequenceEqual(new List<int>{2,1,1,1})) return Ranking.Pair;
+        
         return Ranking.HighCard;
     }
 }
