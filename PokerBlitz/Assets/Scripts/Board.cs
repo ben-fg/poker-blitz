@@ -52,6 +52,11 @@ public class Board
         return currentStreet;
     }
 
+    public void SetCurrentStreet(Street street)
+    {
+        this.currentStreet = street;
+    }
+
     //Moves to the next street
     //Make sure to create validation so this method is never run during showdown
     public void IncrementStreet()
@@ -93,3 +98,4 @@ public class Board
     }
 
 }
+
