@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
-public class Player 
+public class PokerPlayer
 {
     private Pocket pocket;
     private int balance;
@@ -27,7 +27,7 @@ public class Player
     }
 
     private Position position;
-    public Player(Pocket pocket, Position position)
+    public PokerPlayer(Pocket pocket, Position position)
     {
         this.pocket = pocket;
         this.position = position;
@@ -203,7 +203,7 @@ public class Player
 
     public static void SetPot(int pot)
     {
-        Player.pot = pot;
+        PokerPlayer.pot = pot;
     }
 
     public static int GetPot()

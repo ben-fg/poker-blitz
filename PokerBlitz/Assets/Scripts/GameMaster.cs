@@ -2,21 +2,21 @@ using System;
 using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using UnityEditor.Experimental.GraphView;
+//using System.Runtime.CompilerServices;
+//using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
 
 
 public class GameMaster : MonoBehaviour
 {
-    private Player firstPlayer;
-    private Player secondPlayer;
-    private Player thirdPlayer;
-    private Player fourthPlayer;
+    private PokerPlayer firstPlayer;
+    private PokerPlayer secondPlayer;
+    private PokerPlayer thirdPlayer;
+    private PokerPlayer fourthPlayer;
     private bool[,] deck = new bool[13, 4];
-    private List<Player> players = new List<Player>();
-    private List<Player> activePlayers = new List<Player>();
+    private List<PokerPlayer> players = new List<PokerPlayer>();
+    private List<PokerPlayer> activePlayers = new List<PokerPlayer>();
     private Card[] boardCards = new Card[5];
     private Board board;
     
@@ -30,7 +30,7 @@ public class GameMaster : MonoBehaviour
     private const int SmallBlind = 25;
     private const int BigBlind = 50;
     private int positionEnum = 0;
-    private Player currentPlayer;
+    private PokerPlayer currentPlayer;
 
     /*
     For card denominations:
@@ -105,10 +105,10 @@ public class GameMaster : MonoBehaviour
 
             // New cards and positions
             // The positionEnum is used so that ypu could alternate the positions every round 
-            firstPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (Player.Position)((0 + positionEnum) % 4));
-            secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (Player.Position)((1 + positionEnum) % 4));
-            thirdPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (Player.Position)((2 + positionEnum) % 4));
-            fourthPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (Player.Position)((3 + positionEnum) % 4));
+            firstPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((0 + positionEnum) % 4));
+            secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((1 + positionEnum) % 4));
+            thirdPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((2 + positionEnum) % 4));
+            fourthPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((3 + positionEnum) % 4));
 
             // Added all to a list
             players.Add(firstPlayer);
@@ -147,9 +147,9 @@ public class GameMaster : MonoBehaviour
             if (activePlayerIndex == 1)
             {
                 currentPlayer.SetBalance(currentPlayer.GetBalance() - 25);
-                Player.SetPot(Player.GetPot() + 25);
+                PokerPlayer.SetPot(PokerPlayer.GetPot() + 25);
             }
-            Player.DecreaseCallCounter();
+            PokerPlayer.DecreaseCallCounter();
         }
 
         
@@ -197,7 +197,7 @@ public class GameMaster : MonoBehaviour
             // Get the raised amount from the text box
             // Move to the next player
             currentPlayer.Raise(int.Parse(testBox.text));
-            Debug.Log($" Player {activePlayerIndex + 1} raised by {currentPlayer.AmountRaised()}. Current balance: {currentPlayer.GetBalance()} Current pot: {Player.GetPot()}");
+            Debug.Log($" Player {activePlayerIndex + 1} raised by {currentPlayer.AmountRaised()}. Current balance: {currentPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
             activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
             Debug.Log($"Current player is now Player {activePlayerIndex + 1}");
             currentPlayer = activePlayers[activePlayerIndex];
@@ -205,11 +205,11 @@ public class GameMaster : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.C))
         {
             // If someone raised, and you pressed C, you will Call 
-            if (Player.IsGlobalRaised())
+            if (PokerPlayer.IsGlobalRaised())
             {
                 currentPlayer.Call();
-                Debug.Log($"Previous raise; {Player.GetPreviousRaise()}");
-                Debug.Log($" Player {activePlayerIndex + 1} called {Player.GetPreviousRaise()}. Current balance: {currentPlayer.GetBalance()} Current pot: {Player.GetPot()}");
+                Debug.Log($"Previous raise; {PokerPlayer.GetPreviousRaise()}");
+                Debug.Log($" Player {activePlayerIndex + 1} called {PokerPlayer.GetPreviousRaise()}. Current balance: {currentPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
 
                 
                 currentPlayer = activePlayers[activePlayerIndex];
@@ -217,7 +217,7 @@ public class GameMaster : MonoBehaviour
             else
             {
                 currentPlayer.Check();
-                Debug.Log($" Player {activePlayerIndex + 1} checked. Current balance: {currentPlayer.GetBalance()} Current pot: {Player.GetPot()}");
+                Debug.Log($" Player {activePlayerIndex + 1} checked. Current balance: {currentPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
             }
 
             // Move to the next player
@@ -228,7 +228,7 @@ public class GameMaster : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.F))
         {
             currentPlayer.Fold();
-            Debug.Log($" Player {activePlayerIndex + 1} folded. Current balance: {currentPlayer.GetBalance()} Current pot: {Player.GetPot()}");
+            Debug.Log($" Player {activePlayerIndex + 1} folded. Current balance: {currentPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
             activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
             Debug.Log($"Current player is now Player {activePlayerIndex + 1}");
             currentPlayer = activePlayers[activePlayerIndex];
@@ -236,9 +236,9 @@ public class GameMaster : MonoBehaviour
 
 
         // If the 3 people called or 4 peole checked, then isGlobalRaised flag and the counter are reset to false and 0
-        if (Player.GetCallCounter() == (activePlayers.Count - 1) || Player.GetCheckCounter() == activePlayers.Count)
+        if (PokerPlayer.GetCallCounter() == (activePlayers.Count - 1) || PokerPlayer.GetCheckCounter() == activePlayers.Count)
         {
-            Player.ResetGlobals();
+            PokerPlayer.ResetGlobals();
 
             // However if it is also on the showdown, that means the game has ended and a new hand is dealt
             if (board.GetCurrentStreet().Equals(Board.Street.Showdown))
@@ -252,9 +252,9 @@ public class GameMaster : MonoBehaviour
             
         }
         
-        if (Player.GetFoldCounter() == (players.Count-1))
+        if (PokerPlayer.GetFoldCounter() == (players.Count-1))
         {
-            Player.ResetGlobals();
+            PokerPlayer.ResetGlobals();
             isPreFlop = true;
             positionEnum++;
         }
