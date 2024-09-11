@@ -19,7 +19,7 @@ public class GameMaster : MonoBehaviour
     private List<PokerPlayer> activePlayers = new List<PokerPlayer>();
     private Card[] boardCards = new Card[5];
     private Board board;
-    
+
     private int globalMatched;
     [SerializeField] private InputField testBox;
     private int activePlayerIndex = 1;
@@ -32,6 +32,19 @@ public class GameMaster : MonoBehaviour
     private int positionEnum = 0;
     private PokerPlayer currentPlayer;
 
+    private enum Ranking
+    {
+        HighCard,
+        Pair,
+        TwoPair,
+        ThreeOfAKind,
+        Straight,
+        Flush,
+        FullHouse,
+        FourOfAKind,
+        StraightFlush,
+        RoyalFlush,
+    }
     /*
     For card denominations:
     (I'm sorry in advance but there's no way around this)
@@ -63,13 +76,13 @@ public class GameMaster : MonoBehaviour
     {
         int denomination;
         int suit;
-        
+
 
         // Keep generating random cards until a unique one is found or the max attempts is reached
         do
         {
-            denomination = UnityEngine.Random.Range(1, 14);
-            suit = UnityEngine.Random.Range(1, 4);
+            denomination = UnityEngine.Random.Range(0, 13);
+            suit = UnityEngine.Random.Range(0, 4);
         }
         while (deck[denomination, suit]);
 
@@ -89,9 +102,9 @@ public class GameMaster : MonoBehaviour
     void Start()
     {
 
-        
 
-        
+
+
     }
 
     //Update is called once per frame
@@ -132,35 +145,39 @@ public class GameMaster : MonoBehaviour
 
             // Add all players to an active players list 
             // Play the blinds
-            activePlayers.AddRange(players);
-            currentPlayer = activePlayers[activePlayerIndex];
-            //currentPlayer.Raise(SmallBlind);
-            activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
-            currentPlayer = activePlayers[activePlayerIndex];
-            currentPlayer.Raise(BigBlind);
-            activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
-            currentPlayer = activePlayers[activePlayerIndex];
-            Debug.Log(" blinds played");
+            if (board.GetCurrentStreet().Equals(Board.Street.Preflop))
+            {
+                activePlayers.AddRange(players);
+                currentPlayer = activePlayers[activePlayerIndex];
+                currentPlayer.Raise(SmallBlind);
+                activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
+                currentPlayer = activePlayers[activePlayerIndex];
+                currentPlayer.Raise(BigBlind);
+                activePlayerIndex = (activePlayerIndex + 1) % activePlayers.Count;
+                currentPlayer = activePlayers[activePlayerIndex];
+                Debug.Log(" blinds played");
+
+            }
             positionEnum++;
             isPreFlop = false;
             isFlop = true;
-            if (activePlayerIndex == 1)
-            {
-                currentPlayer.SetBalance(currentPlayer.GetBalance() - 25);
-                PokerPlayer.SetPot(PokerPlayer.GetPot() + 25);
-            }
-            PokerPlayer.DecreaseCallCounter();
         }
 
-        
+
 
         if (board.GetCurrentStreet().Equals(Board.Street.Flop))
         {
             // It checks if it is true so it would only show the flop once
             if (isFlop)
             {
+                /*if (activePlayerIndex == 1)
+                {
+
+                    currentPlayer.SetBalance(currentPlayer.GetBalance()-25);
+                    Player.SetPot(Player.GetPot()+25);
+                }*/
                 Debug.Log("I am flopping");
-                
+
                 // Shows the flop cards
                 Debug.Log(board.ToString());
 
@@ -211,7 +228,7 @@ public class GameMaster : MonoBehaviour
                 Debug.Log($"Previous raise; {PokerPlayer.GetPreviousRaise()}");
                 Debug.Log($" Player {activePlayerIndex + 1} called {PokerPlayer.GetPreviousRaise()}. Current balance: {currentPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
 
-                
+
                 currentPlayer = activePlayers[activePlayerIndex];
             }
             else
@@ -249,7 +266,7 @@ public class GameMaster : MonoBehaviour
             {
                 board.IncrementStreet();
             }
-            
+
         }
         
         if (PokerPlayer.GetFoldCounter() == (players.Count-1))
@@ -260,36 +277,33 @@ public class GameMaster : MonoBehaviour
         }
     }
 
-   /* private Ranking DetermineRank(Pocket pocket, Board board)
+    private Ranking DetermineRank(Pocket pocket, Board board)
     {
         // make sure to take into account the street of the board when retrieving the cards
         // if more than 5 cards, find best hand then find the rank
         // assuming 5 cards total for now
-        
-        
+
+
         // first combine pocket cards and board cards to get the player hand
         List<Card> tempPlayerHand = new List<Card>(pocket.GetCards());
         tempPlayerHand.AddRange(board.GetFlop());
-        
-        
-        *//* cards are stored as words, so this stores the card in their number counterpart
+
+        /* cards are stored as words, so this stores the card in their number counterpart
         eg Two of Spades = [2,1]
            King of Hearts = [13,4] 
-        *//*
-        List<(int denomination, int suit)> playerHand = new List<(int, int)>{};
+        */
+        List<(int denomination, int suit)> playerHand = new List<(int, int)> { };
 
         foreach (Card card in tempPlayerHand)
         {
             playerHand.Add(((int)card.GetDenomination(), (int)card.GetSuit()));
         }
 
-
-        *//* sort cards from highest rank to lowest rank
+        /* sort cards from highest rank to lowest rank
             example of sortedHand = [9,4] [7,2] [7,1] [5,3] [5,2] 
-        *//*
+        */
         var sortedHand = playerHand.OrderByDescending(card => card.suit).ToList();
 
-        
         // here we check if the hand is a flush or a straight
         bool isFlush = true;
         bool isStraight = true;
@@ -304,11 +318,9 @@ public class GameMaster : MonoBehaviour
             straightDenomination--;
         }
 
-
-
-        *//* here we count the number of occurrences of each rank, which helps us determine
-            whether the hand is a four of a kind, three of a kind, pair.. etc
-        *//*
+        /* here we count the number of occurrences of each rank, which helps us determine
+           whether the hand is a four of a kind, three of a kind, pair.. etc
+       */
         Dictionary<int, int> denominationCounts = new Dictionary<int, int>();
 
         foreach (var (x, y) in sortedHand)
@@ -323,36 +335,34 @@ public class GameMaster : MonoBehaviour
             }
         }
 
-        *//* from previous example dictionary will be 9:1, 7:2, 5:2
-            converts occurrences values into list [1,2,2]
-            sorts highest to lowest  [2,2,1]
-            possibilites: 
-            [4,1] (four of a kind)
-            [3,2] (full house)
-            [3,1,1] (three of a kind)
-            [2,2,1] (two pair)
-            [2,1,1,1] (pair) 
-            [1,1,1,1,1] (high card)
-            NOTE that any of these possibilites could be a flush and [1,1,1,1,1]
-            could also be a straight so we must return the rankings in order from
-            strongest to weakest
-        */
+        /* from previous example dictionary will be 9:1, 7:2, 5:2
+           converts occurrences values into list [1,2,2]
+           sorts highest to lowest  [2,2,1]
+           possibilites: 
+           [4,1] (four of a kind)
+           [3,2] (full house)
+           [3,1,1] (three of a kind)
+           [2,2,1] (two pair)
+           [2,1,1,1] (pair) 
+           [1,1,1,1,1] (high card)
+           NOTE that any of these possibilites could be a flush and [1,1,1,1,1]
+           could also be a straight so we must return the rankings in order from
+           strongest to weakest
+       */
 
-        /*
         List<int> denominationList = denominationCounts.Values.ToList();
         denominationList = denominationList.OrderByDescending(n => n).ToList();
 
-        if (isFlush && isStraight)                                  return Ranking.StraightFlush;
-        if (denominationList.SequenceEqual(new List<int>{4,1}))     return Ranking.FourOfAKind;
-        if (denominationList.SequenceEqual(new List<int>{3,2}))     return Ranking.FullHouse;
-        if (isFlush)                                                return Ranking.Flush;
-        if (isStraight)                                             return Ranking.Straight;
-        if (denominationList.SequenceEqual(new List<int>{3,1,1}))   return Ranking.ThreeOfAKind;
-        if (denominationList.SequenceEqual(new List<int>{2,2,1}))   return Ranking.TwoPair;
-        if (denominationList.SequenceEqual(new List<int>{2,1,1,1})) return Ranking.Pair;
-        
+        if (isFlush && isStraight) return Ranking.StraightFlush;
+        if (denominationList.SequenceEqual(new List<int> { 4, 1 })) return Ranking.FourOfAKind;
+        if (denominationList.SequenceEqual(new List<int> { 3, 2 })) return Ranking.FullHouse;
+        if (isFlush) return Ranking.Flush;
+        if (isStraight) return Ranking.Straight;
+        if (denominationList.SequenceEqual(new List<int> { 3, 1, 1 })) return Ranking.ThreeOfAKind;
+        if (denominationList.SequenceEqual(new List<int> { 2, 2, 1 })) return Ranking.TwoPair;
+        if (denominationList.SequenceEqual(new List<int> { 2, 1, 1, 1 })) return Ranking.Pair;
+
         return Ranking.HighCard;
-        *//*
-        return null;
-    }*/
-}
+    }
+    }
+

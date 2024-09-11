@@ -26,7 +26,7 @@ public class Card
         Spades,
         Diamonds,
         Clubs,
-        Hearts,
+        Hearts
     }
 
     private Denomination denomination;
