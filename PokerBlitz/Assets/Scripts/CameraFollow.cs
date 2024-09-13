@@ -28,6 +28,7 @@ public class CameraFollow : MonoBehaviour
             //Allows the camera to follow the player vertically
             Vector3 newPos = new Vector3(0, target.position.y + yOffset, -10f);
             transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
+            transform.position = new Vector3(0, transform.position.y, -10f);
         }
         else
         {

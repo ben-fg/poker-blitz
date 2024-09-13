@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using Photon.Pun;
+using Photon.Realtime;
 
 public class CreateAndJoinRooms : MonoBehaviourPunCallbacks
 {
@@ -22,6 +23,8 @@ public class CreateAndJoinRooms : MonoBehaviourPunCallbacks
     public override void OnJoinedRoom()
     {
         //PhotonNetwork.LoadLevel("WaitingLobby");
-        PhotonNetwork.LoadLevel("Game1");
+        Player localPlayer = PhotonNetwork.LocalPlayer;
+        Debug.Log("Player joined with ActorNumber: " + localPlayer.ActorNumber);
+        PhotonNetwork.LoadLevel("WaitingLobby");
     }
 }
