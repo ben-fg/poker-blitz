@@ -124,12 +124,13 @@ public class PokerPlayer
         this.raise = raise;
         if (raise <= balance)
         {
-            pot += (raise - GetPreviousRaises());
+            pot += (raise + GetPreviousRaises());
             balance -= (raise + GetPreviousRaises());
             globalRaised = true;
             callCounter = 0;
             previousRaises.Add(raise);
-            amountCalled += raise;
+            amountCalled += (raise + GetPreviousRaises());
+            
             totalRaises += raise;
             previousRaise = raise;
         }
@@ -204,7 +205,10 @@ public class PokerPlayer
         return checkCounter;
     }
 
-
+    public static int GetNumRaises()
+    {
+        return previousRaises.Count; 
+    }
 
 
 
@@ -238,5 +242,6 @@ public class PokerPlayer
         isChecked = false;
         raise = 0;
         amountCalled = 0;
+        previousCall = 0;
     }
 }
