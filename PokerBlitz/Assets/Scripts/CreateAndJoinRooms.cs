@@ -17,7 +17,13 @@ public class CreateAndJoinRooms : MonoBehaviourPunCallbacks
 
     public void CreateRoom()
     {
-        PhotonNetwork.CreateRoom(createInput.text);
+        RoomOptions options = new RoomOptions
+        {
+            IsVisible = true,
+            IsOpen = true,
+            MaxPlayers = 4
+        };
+        PhotonNetwork.CreateRoom(createInput.text, options, TypedLobby.Default);
     }
 
     public void JoinRoom()
@@ -31,5 +37,15 @@ public class CreateAndJoinRooms : MonoBehaviourPunCallbacks
         Player localPlayer = PhotonNetwork.LocalPlayer;
         Debug.Log("Player joined with ActorNumber: " + localPlayer.ActorNumber);
         PhotonNetwork.LoadLevel("WaitingLobby");
+    }
+
+    public override void OnJoinRoomFailed(short returnCode, string message)
+    {
+        Debug.LogError($"Join Room Failed: {message}");
+    }
+
+    public override void OnCreateRoomFailed(short returnCode, string message)
+    {
+        Debug.LogError($"Create Room Failed: {message}");
     }
 }
