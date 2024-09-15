@@ -5,6 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - Ground
+  - PU1
+  - PU2
+  - PU3
   layers:
   - Default
   - TransparentFX

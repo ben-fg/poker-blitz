@@ -39,19 +39,7 @@ public class GameMaster : MonoBehaviour
     private int activePokerPlayers = 4;
     private PokerPlayer currentPokerPlayer;
 
-    private enum Ranking
-    {
-        HighCard,
-        Pair,
-        TwoPair,
-        ThreeOfAKind,
-        Straight,
-        Flush,
-        FullHouse,
-        FourOfAKind,
-        StraightFlush,
-        RoyalFlush,
-    }
+    public static int gameNumber;
     /*
     For card denominations:
     (I'm sorry in advance but there's no way around this)
@@ -532,8 +520,8 @@ private Ranking DetermineBestHand(Pocket pocket, Board board)
         if (denominationList.SequenceEqual(new List<int>{2,2,1}))   return Ranking.TwoPair;
         if (denominationList.SequenceEqual(new List<int>{2,1,1,1})) return Ranking.Pair;*/
         
-        return Ranking.HighCard;
-        //return null;
+        //return Ranking.HighCard;
+        return null;
 
     }
 }
