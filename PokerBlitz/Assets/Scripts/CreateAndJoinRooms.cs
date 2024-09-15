@@ -10,6 +10,11 @@ public class CreateAndJoinRooms : MonoBehaviourPunCallbacks
     public TMP_InputField createInput;
     public TMP_InputField joinInput;
 
+    void Start()
+    {
+        PhotonNetwork.ConnectUsingSettings();
+    }
+
     public void CreateRoom()
     {
         PhotonNetwork.CreateRoom(createInput.text);
