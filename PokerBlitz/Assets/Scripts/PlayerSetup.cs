@@ -7,7 +7,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
 
-public class PlayerSetup : MonoBehaviour
+public class PlayerSetup : MonoBehaviourPunCallbacks
 {
     public Color[] playerColours = { Color.red, Color.blue, Color.green, Color.yellow };
     private SpriteRenderer playerRenderer;
@@ -31,8 +31,8 @@ public class PlayerSetup : MonoBehaviour
         if (view.IsMine)
         {
             PhotonNetwork.NickName = PlayerPrefs.GetString("Username");
-            AssignPlayerColour();
         }
+        AssignPlayerColour();
 
         view.RPC("SetPlayerUsername", RpcTarget.AllBuffered, PhotonNetwork.NickName);
     }
@@ -59,9 +59,9 @@ public class PlayerSetup : MonoBehaviour
     [PunRPC]
     public void SetPlayerColour(int colourIndex)
     {
+        Debug.Log($"Set player color to {playerColours[colourIndex]} for {view.Owner.NickName}");
         //Access the owner of this PhotonView to get the player's custom properties
         playerRenderer.color = playerColours[colourIndex];
-        Debug.Log($"Set player color to {playerColours[colourIndex]} for {view.Owner.NickName}");
     }
 
     [PunRPC]

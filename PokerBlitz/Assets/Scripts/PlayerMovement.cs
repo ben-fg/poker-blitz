@@ -12,6 +12,7 @@ public class PlayerMovement : MonoBehaviour
     }
     [SerializeField] private MovementType movType;
     [SerializeField] private float movSpeed;
+    private float hMov;
     private Rigidbody2D playerRb;
     private SpriteRenderer playerRenderer;
 
@@ -23,8 +24,10 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float jumpTime;
     private bool isGrounded;
     private bool isJumping;
-
     PhotonView view;
+
+    private bool isStunned;
+    public static bool isFrozen;
     void Start()
     {
         playerRb = GetComponent<Rigidbody2D>();
@@ -41,7 +44,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        if (view.IsMine)
+        if (view.IsMine && !isFrozen && !isStunned)
         //if (true)
         {
             //Minimalist top down movement for testing
@@ -52,9 +55,8 @@ public class PlayerMovement : MonoBehaviour
 
             if (movType == MovementType.Platformer)
             {
-                float hMov = Input.GetAxis("Horizontal");
+                hMov = Input.GetAxis("Horizontal");
 
-                //Applies horizontal motion to the player
                 playerRb.velocity = new Vector2(hMov * movSpeed, playerRb.velocity.y);
 
                 //Flips the player sprite when they turn around
@@ -106,6 +108,19 @@ public class PlayerMovement : MonoBehaviour
                 }
             }
         }
+        //Freezes the player
+        if (isFrozen)
+        {
+            playerRb.velocity = new Vector2(0, 0);
+        }
+        if (isStunned)
+        {
+            if (movType == MovementType.Platformer)
+            {
+                //Applies horizontal motion to the player
+                playerRb.velocity = new Vector2(playerRb.velocity.x, playerRb.velocity.y);
+            }
+        }
     }
 
     //Only works in platformer mode
@@ -125,6 +140,50 @@ public class PlayerMovement : MonoBehaviour
             else
             {
                 isDoubleJumping = false;
+            }
+        }
+    }
+
+    public IEnumerator StunPlayer(float duration)
+    {
+        isStunned = true;
+        yield return new WaitForSeconds(duration);
+        isStunned = false;
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (GameMaster.gameNumber == 1)
+        {
+            if (collision.CompareTag("PU1"))
+            {
+                StartCoroutine(StunPlayer(1));
+                if (collision.GetComponent<SpriteRenderer>().flipX)
+                {
+                    playerRb.AddForce(new Vector2(-1000, 400f));
+                }
+                else
+                {
+                    playerRb.AddForce(new Vector2(1000, 400f));
+                }
+            }
+
+            if (collision.CompareTag("PU2"))
+            {
+                StartCoroutine(StunPlayer(4));
+            }
+        }
+    }
+
+    private void OnTriggerStay2D(Collider2D collision)
+    {
+        if (GameMaster.gameNumber == 1)
+        {
+            if (collision.CompareTag("PU2"))
+            {
+                Vector2 magnetPos = collision.GetComponent<Transform>().position;
+                Vector2 direction = (magnetPos - (Vector2)transform.position).normalized;
+                playerRb.AddForce(direction * 100);
             }
         }
     }

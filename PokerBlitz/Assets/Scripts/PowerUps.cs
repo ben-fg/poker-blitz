@@ -8,6 +8,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 public class PowerUps : MonoBehaviour
 {
     Hashtable playerProperties = new Hashtable();
+    [SerializeField] GameObject powerUpButtons;
     // Start is called before the first frame update
     void Start()
     {
@@ -26,6 +27,7 @@ public class PowerUps : MonoBehaviour
         playerProperties["PowerUp"] = 1;
         PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
         PlayerPowerUps.selectionEnd = true;
+        powerUpButtons.SetActive(false);
     }
 
     public void PowerUp2()
@@ -33,6 +35,7 @@ public class PowerUps : MonoBehaviour
         playerProperties["PowerUp"] = 2;
         PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
         PlayerPowerUps.selectionEnd = true;
+        powerUpButtons.SetActive(false);
     }
 
     public void PowerUp3()
@@ -40,5 +43,6 @@ public class PowerUps : MonoBehaviour
         playerProperties["PowerUp"] = 3;
         PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
         PlayerPowerUps.selectionEnd = true;
+        powerUpButtons.SetActive(false);
     }
 }

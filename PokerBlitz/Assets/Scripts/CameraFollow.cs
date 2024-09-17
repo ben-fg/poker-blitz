@@ -1,40 +1,51 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Photon.Pun;
 
 public class CameraFollow : MonoBehaviour
 {
+    [SerializeField] Camera myCamera;
     private readonly float followSpeed = 10f;
     [SerializeField] private float yOffset;
     private Transform target;
     [SerializeField] private bool followOnX;
     [SerializeField] private bool followOnY;
+    PhotonView view;
 
     private void Start()
     {
-        target = transform.parent;
+        view = GetComponent<PhotonView>();
+        target = transform;
     }
 
     void Update()
     {
-        if (followOnX)
+        if (view.IsMine)
         {
-            //Allows the camera to follow the player horizontally
-            Vector3 newPos = new Vector3(target.position.x, yOffset, -10f);
-            transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
-        }
-        else if (followOnY)
-        {
-            //Allows the camera to follow the player vertically
-            Vector3 newPos = new Vector3(0, target.position.y + yOffset, -10f);
-            transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
-            transform.position = new Vector3(0, transform.position.y, -10f);
+            if (followOnX)
+            {
+                //Allows the camera to follow the player horizontally
+                Vector3 newPos = new Vector3(target.position.x, yOffset, -10f);
+                myCamera.transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
+            }
+            else if (followOnY)
+            {
+                //Allows the camera to follow the player vertically
+                Vector3 newPos = new Vector3(0, target.position.y + yOffset, -10f);
+                myCamera.transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
+                myCamera.transform.position = new Vector3(0, transform.position.y, -10f);
+            }
+            else
+            {
+                //Allows the camera to follow the player horizontally and vertically
+                Vector3 newPos = new Vector3(target.position.x, target.position.y + yOffset, -10f);
+                myCamera.transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
+            }
         }
         else
         {
-            //Allows the camera to follow the player horizontally and vertically
-            Vector3 newPos = new Vector3(target.position.x, target.position.y + yOffset, -10f);
-            transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
+            myCamera.gameObject.SetActive(false);
         }
     }
 }
