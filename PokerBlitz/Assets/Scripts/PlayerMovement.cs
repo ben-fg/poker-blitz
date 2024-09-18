@@ -134,7 +134,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if (doubleJumpTimeCounter > 0)
             {
-                playerRb.velocity = new Vector2(playerRb.velocity.x, jumpForce * 1.5f);
+                playerRb.velocity = new Vector2(playerRb.velocity.x, jumpForce * 1.25f);
                 doubleJumpTimeCounter -= Time.deltaTime;
             }
             else

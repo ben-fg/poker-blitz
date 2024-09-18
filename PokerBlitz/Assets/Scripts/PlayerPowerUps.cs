@@ -99,7 +99,7 @@ public class PlayerPowerUps : MonoBehaviour
                     {
                         Debug.Log("Jump");
                         playerMovement.DoubleJump();
-                        powerUpCooldowns[2] = 3;
+                        powerUpCooldowns[2] = 4;
                     }
                 }
             }
