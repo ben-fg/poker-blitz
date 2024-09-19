@@ -6,6 +6,7 @@ using System.Collections.Generic;
 //using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
+using Unity.VisualScripting;
 
 
 public class GameMaster : MonoBehaviour
@@ -422,24 +423,35 @@ public class GameMaster : MonoBehaviour
 
     private List<List<(int,int)>> GenerateAllHands(Pocket pocket, Board board)
     {
-        // although variable is called sevenCardHand it could also include 6 cards
+        /* although variable is called sevenCardHand it could also include 6 cards
+            gets all cards available to the player
+        */
         List<Card> tempCards = new List<Card>(pocket.GetCards());
         tempCards.AddRange(board.GetFlop());
 
 
         List<(int denomination, int suit)> cards = new List<(int, int)>{};
 
+        
+        // converts Card[denomination, suit] into List<(int,int)> format
         foreach (Card card in tempCards)
         {
             cards.Add(((int)card.GetDenomination(), (int)card.GetSuit()));
         }
 
 
+        
+        /* generates all possible 5-card hands from cards available to player
+            and stores in combinations */
         int r = 5;
         List<List<(int,int)>> combinations = GetCombinations(cards, r);
 
         return combinations;
 
+        
+        /* recursive function to calculate all combinations
+            calls GenerateCombination as helper function
+        */
         static List<List<(int,int)>> GetCombinations(List<(int,int)> cards, int r)
         {
             List<List<(int,int)>> result = new List<List<(int,int)>>();
@@ -471,47 +483,25 @@ public class GameMaster : MonoBehaviour
 
     private Ranking DetermineBestHand(List<List<(int,int)>> listOfHands)
         {
-        
-            /* dont need this code at the moment
-
-                    // first combine pocket cards and board cards to get the player hand
-                    List<Card> tempPlayerHand = new List<Card>(pocket.GetCards());
-                    tempPlayerHand.AddRange(board.GetFlop());
-                    
-                    
-                    cards are stored as words, so this stores the card in their number counterpart
-                    eg Two of Spades = [2,1]
-                    King of Hearts = [13,4] 
-                    
-                    List<(int denomination, int suit)> playerHand = new List<(int, int)>{};
-
-                    foreach (Card card in tempPlayerHand)
-                    {
-                        playerHand.Add(((int)card.GetDenomination(), (int)card.GetSuit()));
-                    } 
-            */
-
-
-            /* sort cards from highest rank to lowest denomination
-                example of sortedHand = [9,4] [7,2] [7,1] [5,3] [5,2] 
-            */
-
 
             static int determineHandType(List<int> denominationList, bool isFlush, bool isStraight)
                 {
-                    if (isFlush && isStraight)                                  return (int)Ranking.StraightFlush;              
-                    if (denominationList.SequenceEqual(new List<int>{4,1}))     return (int)Ranking.FourOfAKind;
-                    if (denominationList.SequenceEqual(new List<int>{3,2}))     return (int)Ranking.FullHouse;
-                    if (isFlush)                                                return (int)Ranking.Flush;
-                    if (isStraight)                                             return (int)Ranking.Straight;
-                    if (denominationList.SequenceEqual(new List<int>{3,1,1}))   return (int)Ranking.ThreeOfAKind;
-                    if (denominationList.SequenceEqual(new List<int>{2,2,1}))   return (int)Ranking.TwoPair;
-                    if (denominationList.SequenceEqual(new List<int>{2,1,1,1})) return (int)Ranking.Pair;
-                    return (int)Ranking.HighCard;
+                    if (isFlush && isStraight)                                  return (int)Ranking.CardRank.StraightFlush;              
+                    if (denominationList.SequenceEqual(new List<int>{4,1}))     return (int)Ranking.CardRank.FourOfAKind;
+                    if (denominationList.SequenceEqual(new List<int>{3,2}))     return (int)Ranking.CardRank.FullHouse;
+                    if (isFlush)                                                return (int)Ranking.CardRank.Flush;
+                    if (isStraight)                                             return (int)Ranking.CardRank.Straight;
+                    if (denominationList.SequenceEqual(new List<int>{3,1,1}))   return (int)Ranking.CardRank.ThreeOfAKind;
+                    if (denominationList.SequenceEqual(new List<int>{2,2,1}))   return (int)Ranking.CardRank.TwoPair;
+                    if (denominationList.SequenceEqual(new List<int>{2,1,1,1})) return (int)Ranking.CardRank.Pair;
+                    return (int)Ranking.CardRank.HighCard;
                 }
 
 
 
+            /* sort cards from highest denomination to lowest denomination in each hand
+                example of sortedHand = [9,4] [7,2] [7,1] [5,3] [5,2] 
+            */
             List<List<(int,int)>> sortedHands = new List<List<(int, int)>>();
 
             foreach (var hand in listOfHands)
@@ -520,12 +510,14 @@ public class GameMaster : MonoBehaviour
                 sortedHands.Add(sortedHand);
             }
 
+
             int strongestHandLevel = -1;
             int currentHandLevel = -1;
             List<List<(int,int)>> topRankedHands = new List<List<(int, int)>>();
 
             foreach (var hand in sortedHands)
             {
+                // determines whether current hand is flush or straight
                 bool isFlush = true;
                 bool isStraight = true;
 
@@ -540,7 +532,9 @@ public class GameMaster : MonoBehaviour
                 }
 
                 
-                
+                /* here we count the number of occurrences of each rank, which helps us determine
+                whether the hand is a four of a kind, three of a kind, pair.. etc
+                */
                 Dictionary<int, int> denominationCounts = new Dictionary<int, int>();
 
                 foreach (var (x, y) in hand)
@@ -560,7 +554,7 @@ public class GameMaster : MonoBehaviour
 
                 currentHandLevel = determineHandType(denominationList, isFlush, isStraight);
 
-
+                // keep a list of only the highest ranking hands
                 if (currentHandLevel > strongestHandLevel)
                 {
                     strongestHandLevel = currentHandLevel;
@@ -598,58 +592,8 @@ public class GameMaster : MonoBehaviour
                     break;
             }
 
-            
-            // here we check if the hand is a flush or a straight
-            //bool isFlush = true;
-            //bool isStraight = true;
+            return null;
 
-            /*int flushSuit = sortedHand[0].Item2;
-            int straightDenomination = sortedHand[0].Item1;
-
-            foreach (var card in sortedHand)
-            {
-                if (card.Item2 != flushSuit) isFlush = false;
-                if (card.Item1 != straightDenomination) isStraight = false;
-                straightDenomination--;
-            }*/
-
-
-
-            /* here we count the number of occurrences of each rank, which helps us determine
-                whether the hand is a four of a kind, three of a kind, pair.. etc
-            */
-            //Dictionary<int, int> denominationCounts = new Dictionary<int, int>();
-
-    
-            /* from previous example dictionary will be 9:1, 7:2, 5:2
-                converts occurrences values into list [1,2,2]
-                sorts highest to lowest  [2,2,1]
-                possibilites: 
-                [4,1] (four of a kind)
-                [3,2] (full house)
-                [3,1,1] (three of a kind)
-                [2,2,1] (two pair)
-                [2,1,1,1] (pair) 
-                [1,1,1,1,1] (high card)
-                NOTE that any of these possibilites could be a flush and [1,1,1,1,1]
-                could also be a straight so we must return the rankings in order from
-                strongest to weakest
-            */
-
-            /*List<int> denominationList = denominationCounts.Values.ToList();
-            denominationList = denominationList.OrderByDescending(n => n).ToList();
-            */
-
-            /*if (isFlush && isStraight)                                  return Ranking.StraightFlush;              
-            if (denominationList.SequenceEqual(new List<int>{4,1}))     return Ranking.FourOfAKind;
-            if (denominationList.SequenceEqual(new List<int>{3,2}))     return Ranking.FullHouse;
-            if (isFlush)                                                return Ranking.Flush;
-            if (isStraight)                                             return Ranking.Straight;
-            if (denominationList.SequenceEqual(new List<int>{3,1,1}))   return Ranking.ThreeOfAKind;
-            if (denominationList.SequenceEqual(new List<int>{2,2,1}))   return Ranking.TwoPair;
-            if (denominationList.SequenceEqual(new List<int>{2,1,1,1})) return Ranking.Pair;*/
-            
-            //return Ranking.HighCard;
         }
 }
 
