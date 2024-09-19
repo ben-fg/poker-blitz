@@ -15,16 +15,11 @@ public class GameMaster : MonoBehaviour
     private PokerPlayer secondPlayer;
     private PokerPlayer thirdPlayer;
     private PokerPlayer fourthPlayer;
-    private int firstPlayerBalance = 1000;
-    private int secondPlayerBalance = 1000;
-    private int thirdPlayerBalance = 1000;
-    private int fourthPlayerBalance = 1000;
     private bool[,] deck = new bool[13, 4];
     private List<PokerPlayer> players = new List<PokerPlayer>();
     private Card[] boardCards = new Card[5];
     private Board board;
 
-    private int globalMatched;
     [SerializeField] private InputField testBox;
     private int activePokerPlayerIndex;
     private int sbIndex;
@@ -99,8 +94,10 @@ public class GameMaster : MonoBehaviour
     void Start()
     {
 
-
-
+        firstPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)0, 1);
+        secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)1, 2);
+        thirdPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)2, 3);
+        fourthPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)3, 4);
 
     }
 
@@ -115,26 +112,28 @@ public class GameMaster : MonoBehaviour
 
             players.Clear();
 
+            activeplayers = 4;
+
             // New cards and positions
             // The positionEnum is used so that you could alternate the positions every round 
 
             shift = (4 - positionEnum) % 4;
 
-            firstPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((0 + shift) % 4), 1);
-            secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((1 + shift) % 4), 2);
-            thirdPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((2 + shift) % 4), 3);
-            fourthPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((3 + shift) % 4), 4);
+            firstPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
+            secondPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
+            thirdPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
+            fourthPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
+
+            firstPlayer.SetPosition((PokerPlayer.Position)((0 + shift) % 4));
+            secondPlayer.SetPosition((PokerPlayer.Position)((1 + shift) % 4));
+            thirdPlayer.SetPosition((PokerPlayer.Position)((2 + shift) % 4));
+            fourthPlayer.SetPosition((PokerPlayer.Position)((3 + shift) % 4));
 
             // Added all to a list
             players.Add(firstPlayer);
             players.Add(secondPlayer);
             players.Add(thirdPlayer);
             players.Add(fourthPlayer);
-
-            firstPlayer.SetBalance(firstPlayerBalance);
-            secondPlayer.SetBalance(secondPlayerBalance);
-            thirdPlayer.SetBalance(thirdPlayerBalance);
-            fourthPlayer.SetBalance(fourthPlayerBalance);
 
             // Shows on screen the Pocket cards for every PokerPlayer
             Debug.Log(firstPlayer.GetPocket().ToString());
@@ -149,8 +148,6 @@ public class GameMaster : MonoBehaviour
             }
 
             board = new(boardCards);
-
-
 
             // Add all players to an active players list 
             // Play the blinds
@@ -387,13 +384,10 @@ public class GameMaster : MonoBehaviour
             // However if it is also on the showdown, that means the game has ended and a new hand is dealt
             if (board.GetCurrentStreet().Equals(Board.Street.Showdown))
             {
-
-                firstPlayerBalance = players[0].GetBalance();
-                secondPlayerBalance = players[1].GetBalance();
-                thirdPlayerBalance = players[2].GetBalance();
-                fourthPlayerBalance = players[3].GetBalance();
-
-                activeplayers = 4;
+                foreach (var pokerPlayer in players)
+                {
+                    pokerPlayer.Unfold();
+                }
                 isPreFlop = true;
             }
             else
@@ -409,11 +403,11 @@ public class GameMaster : MonoBehaviour
         {
 
             PokerPlayer.ResetGlobals();
-            firstPlayerBalance = players[0].GetBalance();
-            secondPlayerBalance = players[1].GetBalance();
-            thirdPlayerBalance = players[2].GetBalance();
-            fourthPlayerBalance = players[3].GetBalance();
-            activeplayers = 4;
+            foreach (var pokerPlayer in players)
+            {
+                pokerPlayer.Reset();
+                pokerPlayer.Unfold();
+            }
 
             isPreFlop = true;
         }

@@ -22,7 +22,7 @@ public class PokerPlayer
     private static bool globalRaised = false;
     private static int pot = 0;
     private static int previousRaise = 0;
-    private Board board;
+
     public enum Position
     {
         SB, // Small Blind
