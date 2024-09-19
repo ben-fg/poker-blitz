@@ -26,4 +26,16 @@ public class Ranking
         this.fiveCardHand = fiveCardHand;
     }
     //GETTERS AND SETTERS ETC.....
+
+    public CardRank CurrentRank
+    {
+        get { return currentRank; }
+        set { currentRank = value; }
+    }
+
+    public Card[] FiveCardHand
+    {
+        get { return fiveCardHand; }
+        set { fiveCardHand = value; }
+    }
 }
