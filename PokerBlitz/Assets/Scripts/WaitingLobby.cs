@@ -23,12 +23,12 @@ public class WaitingLobby : MonoBehaviour
     {
         if (PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.PlayerCount == requiredPlayers)
         {
-            PhotonNetwork.LoadLevel("Game1");
+            PhotonNetwork.LoadLevel("PreGame");
         }
     }
 
     public void ForceStart()
     {
-        PhotonNetwork.LoadLevel("Game1");
+        PhotonNetwork.LoadLevel("PreGame");
     }
 }

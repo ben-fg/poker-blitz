@@ -21,6 +21,9 @@ EditorBuildSettings:
     path: Assets/Scenes/PokerRoom.unity
     guid: aa2c1b4a02ba1dc42916a1a082434569
   - enabled: 1
+    path: Assets/Scenes/PreGame.unity
+    guid: c575cdf5c101ed24eb65a20eb6231d75
+  - enabled: 1
     path: Assets/Scenes/Game1.unity
     guid: c8ee8334b4a5bad4eb519af5f75f8bc9
   m_configObjects: {}

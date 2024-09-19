@@ -85,7 +85,7 @@ public class PlayerPowerUps : MonoBehaviour
                     {
                         Debug.Log("Box");
                         StartCoroutine(TogglePowerUp(0.5f, "PU1"));
-                        powerUpCooldowns[0] = 6;
+                        powerUpCooldowns[0] = 7;
                         myPowerUp.GetComponent<AudioSource>().Play();
                     }
                     else if (powerUpNum == 2 && powerUpCooldowns[1] <= 0)
