@@ -2,18 +2,18 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class AccountDetails : MonoBehaviour
 {
-    [SerializeField] private InputField usernameBox;
+    [SerializeField] private TMP_InputField usernameBox;
     [SerializeField] private Text usernameText;
-    // Start is called before the first frame update
+
     void Start()
     {
-        
+        usernameBox.text = PlayerPrefs.GetString("Username");
     }
 
-    // Update is called once per frame
     void Update()
     {
         
@@ -22,14 +22,24 @@ public class AccountDetails : MonoBehaviour
     public void CheckUsername()
     {
         string username = usernameBox.text;
-        if (username != "Emerald")
+        if (username == "Emerald")
+        {
+            usernameText.text = "You cannot use that username.";
+        }
+        else if (username.Length > 10)
+        {
+            usernameText.text = "Cannot be more than 10 characters.";
+        }
+        else
         {
             PlayerPrefs.SetString("Username", username);
             usernameText.text = "Successfully set username!";
         }
-        else
-        {
-            usernameText.text = "Username taken.";
-        }
+    }
+
+    public void ResetConfirmText()
+    {
+        usernameText.text = "";
+        usernameBox.text = PlayerPrefs.GetString("Username");
     }
 }

@@ -80,7 +80,7 @@ public class PlayerMovement : MonoBehaviour
                 }
 
                 //Applies an upwards force on the player when the space bar is hit
-                if (isGrounded == true && Input.GetKeyDown(KeyCode.Space))
+                if (isGrounded == true && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W)))
                 {
                     isJumping = true;
                     jumpTimeCounter = jumpTime;
@@ -88,7 +88,7 @@ public class PlayerMovement : MonoBehaviour
                 }
 
                 //Keeps pushing the player up, but stops when the height limit is reached
-                if (Input.GetKey(KeyCode.Space) && isJumping == true)
+                if ((Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.W)) && isJumping == true)
                 {
                     if (jumpTimeCounter > 0)
                     {
@@ -102,7 +102,7 @@ public class PlayerMovement : MonoBehaviour
                 }
 
                 //Cancels the upwards force on the player when the key is released
-                if (Input.GetKeyUp(KeyCode.Space))
+                if (Input.GetKeyUp(KeyCode.Space) || Input.GetKeyUp(KeyCode.W))
                 {
                     isJumping = false;
                 }

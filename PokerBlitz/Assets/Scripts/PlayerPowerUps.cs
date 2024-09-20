@@ -79,7 +79,7 @@ public class PlayerPowerUps : MonoBehaviour
                 }
 
                 //Applies the selected powerups ability
-                if (view.IsMine && Input.GetKeyDown(KeyCode.LeftShift))
+                if (view.IsMine && (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift)))
                 {
                     if (powerUpNum == 1 && powerUpCooldowns[0] <= 0)
                     {

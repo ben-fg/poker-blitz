@@ -20,7 +20,7 @@ public class PreGame : MonoBehaviour
         if (GameMaster.gameNumber == 1)
         {
             preGameText[0].text = "Jump across the platforms to climb the tower. Be the first player to reach the top.";
-            preGameText[1].text = "A - Move left\nD - Move right\nSpace(Hold) - Jump\nLShift - Use ability";
+            preGameText[1].text = "A - Move left\nD - Move right\nSpace or W (Hold) - Jump\nShift - Use ability";
             preGameText[2].text = "Boxing Glove";
             preGameText[3].text = "Knock an opponent off the platform. [Cooldown: 7s]";
             preGameText[4].text = "Magnet";
