@@ -6,7 +6,7 @@ using Photon.Pun;
 public class CameraFollow : MonoBehaviour
 {
     [SerializeField] Camera myCamera;
-    private readonly float followSpeed = 10f;
+    [SerializeField] private float followSpeed = 10f;
     [SerializeField] private float yOffset;
     private Transform target;
     [SerializeField] private bool followOnX;
@@ -23,13 +23,13 @@ public class CameraFollow : MonoBehaviour
     {
         if (view.IsMine)
         {
-            if (followOnX)
+            if (followOnX && !followOnY)
             {
                 //Allows the camera to follow the player horizontally
                 Vector3 newPos = new Vector3(target.position.x, yOffset, -10f);
                 myCamera.transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
             }
-            else if (followOnY)
+            else if (followOnY && !followOnX)
             {
                 //Allows the camera to follow the player vertically
                 Vector3 newPos = new Vector3(0, target.position.y + yOffset, -10f);
@@ -40,7 +40,8 @@ public class CameraFollow : MonoBehaviour
             {
                 //Allows the camera to follow the player horizontally and vertically
                 Vector3 newPos = new Vector3(target.position.x, target.position.y + yOffset, -10f);
-                myCamera.transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
+                myCamera.transform.position = newPos;
+                //myCamera.transform.position = Vector3.Slerp(transform.position, newPos, followSpeed * Time.deltaTime);
             }
         }
         else

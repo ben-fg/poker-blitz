@@ -12,7 +12,6 @@ public class PowerUps : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        GameMaster.gameNumber = 1;
         playerProperties["PowerUp"] = 4;
     }
 

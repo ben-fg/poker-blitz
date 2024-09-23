@@ -8,6 +8,7 @@ TagManager:
   - PU1
   - PU2
   - PU3
+  - CannonBall
   layers:
   - Default
   - TransparentFX

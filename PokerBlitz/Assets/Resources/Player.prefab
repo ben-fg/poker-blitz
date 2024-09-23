@@ -181,6 +181,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   jumpTime: 0
+  faceMouse: 0
+  cursorTexture: {fileID: 0}
 --- !u!114 &3137329460136995194
 MonoBehaviour:
   m_ObjectHideFlags: 0

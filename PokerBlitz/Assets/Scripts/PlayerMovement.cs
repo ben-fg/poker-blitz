@@ -24,6 +24,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float jumpTime;
     private bool isGrounded;
     private bool isJumping;
+    [SerializeField] bool faceMouse;
+    [SerializeField] Texture2D cursorTexture;
     PhotonView view;
 
     private bool isStunned;
@@ -40,6 +42,16 @@ public class PlayerMovement : MonoBehaviour
         {
             playerRenderer = GetComponentInChildren<SpriteRenderer>();
         }
+
+        if (faceMouse)
+        {
+            Vector2 hotspot = new Vector2(cursorTexture.width / 2, cursorTexture.height / 2);
+            Cursor.SetCursor(cursorTexture, hotspot, CursorMode.Auto);
+        }
+        else
+        {
+            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+        }
     }
 
     void Update()
@@ -51,6 +63,16 @@ public class PlayerMovement : MonoBehaviour
             if (movType == MovementType.TopDown)
             {
                 playerRb.velocity = new Vector2(Input.GetAxis("Horizontal") * movSpeed, Input.GetAxis("Vertical") * movSpeed);
+
+                if (faceMouse)
+                {
+                    //Make the player rotate to face the mouse
+                    Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                    Vector3 direction = mousePosition - transform.position;
+                    direction.z = 0;
+                    float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                    view.RPC("FaceMouseRPC", RpcTarget.All, angle);
+                }
             }
 
             if (movType == MovementType.Platformer)
@@ -121,6 +143,17 @@ public class PlayerMovement : MonoBehaviour
                 playerRb.velocity = new Vector2(playerRb.velocity.x, playerRb.velocity.y);
             }
         }
+    }
+
+    [PunRPC]
+    public void FaceMouseRPC(float angle)
+    {
+        playerRenderer.transform.rotation = Quaternion.Euler(0, 0, angle);
+    }
+
+    public void SetSpeed(float speed)
+    {
+        this.movSpeed = speed;
     }
 
     //Only works in platformer mode

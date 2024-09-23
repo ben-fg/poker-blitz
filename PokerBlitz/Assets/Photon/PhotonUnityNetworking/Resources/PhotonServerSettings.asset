@@ -45,6 +45,10 @@ MonoBehaviour:
   - ActivateTriggerRPC
   - DeactivateTriggerRPC
   - FlipItemRPC
+  - ChangeCannon
+  - FaceMouseRPC
+  - ShootForAll
+  - MoveForAll
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

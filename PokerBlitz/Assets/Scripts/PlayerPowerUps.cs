@@ -12,11 +12,16 @@ public class PlayerPowerUps : MonoBehaviour
     private PlayerMovement playerMovement;
     PhotonView view;
     private GameObject myPowerUp = null;
+    private SpriteRenderer playerRenderer;
     private int powerUpNum;
     private float displacement = 0;
     [SerializeField] private Image abilityIcon;
     [SerializeField] private Sprite[] powerUpSprites = new Sprite[3];
     [SerializeField] private TextMeshProUGUI cooldown;
+
+    private CannonShoot cannon;
+    private Rigidbody2D playerRb;
+
     public static bool selectionEnd = false;
 
     void Start()
@@ -24,6 +29,14 @@ public class PlayerPowerUps : MonoBehaviour
         PlayerMovement.isFrozen = true;
         view = GetComponent<PhotonView>();
         playerMovement = GetComponent<PlayerMovement>();
+        if (GetComponent<SpriteRenderer>() != null)
+        {
+            playerRenderer = GetComponent<SpriteRenderer>();
+        }
+        else
+        {
+            playerRenderer = GetComponentInChildren<SpriteRenderer>();
+        }
     }
 
     void Update()
@@ -83,27 +96,98 @@ public class PlayerPowerUps : MonoBehaviour
                 {
                     if (powerUpNum == 1 && powerUpCooldowns[0] <= 0)
                     {
-                        Debug.Log("Box");
                         StartCoroutine(TogglePowerUp(0.5f, "PU1"));
                         powerUpCooldowns[0] = 7;
                         myPowerUp.GetComponent<AudioSource>().Play();
                     }
                     else if (powerUpNum == 2 && powerUpCooldowns[1] <= 0)
                     {
-                        Debug.Log("Magnet");
                         StartCoroutine(TogglePowerUp(4f, "PU2"));
                         powerUpCooldowns[1] = 12;
                         myPowerUp.GetComponent<AudioSource>().Play();
                     }
                     else if (powerUpNum == 3 && powerUpCooldowns[2] <= 0)
                     {
-                        Debug.Log("Jump");
                         playerMovement.DoubleJump();
                         powerUpCooldowns[2] = 4;
                     }
                 }
             }
         }
+        else if (GameMaster.gameNumber == 2)
+        {
+            if (selectionEnd)
+            {
+                //Selects the appropriate powerup
+                powerUpNum = (int)PhotonNetwork.LocalPlayer.CustomProperties["PowerUp"];
+                if (view.IsMine)
+                {
+                    view.RPC("ChangeCannon", RpcTarget.All);
+                }
+                cannon = GetComponent<CannonShoot>();
+                playerRb = GetComponent<Rigidbody2D>();
+                if (powerUpNum == 1)
+                {
+                    cannon.SetCannonProperties(15, 25, view.Owner.ActorNumber);
+                }
+                else if (powerUpNum == 2)
+                {
+                    cannon.SetCannonProperties(10, 100, view.Owner.ActorNumber);
+                    GetComponent<CircleCollider2D>().radius = 1;
+                }
+                else if (powerUpNum == 3)
+                {
+                    playerMovement.SetSpeed(10);
+                }
+                else if (powerUpNum == 0)
+                {
+                    cannon.SetCannonProperties(12.5f, 50, view.Owner.ActorNumber);
+                }
+                PlayerMovement.isFrozen = false;
+                selectionEnd = false;
+            }
+
+            //Counts down a cooldown (fire rate)
+            if (powerUpCooldowns[powerUpNum] > 0)
+            {
+                powerUpCooldowns[powerUpNum] -= Time.deltaTime;
+            }
+
+            //Allows the player to shoot
+            if (view.IsMine && Input.GetKey(KeyCode.Mouse0))
+            {
+                //Vector2 direction = new Vector2(Mathf.Sin(Mathf.Abs(playerRenderer.transform.rotation.z) + 90), Mathf.Cos(Mathf.Abs(playerRenderer.transform.rotation.z) + 90));
+                Vector2 direction = playerRenderer.transform.right;
+                if (powerUpNum == 1 && powerUpCooldowns[1] <= 0)
+                {
+                    Debug.Log("Gunner");
+                    //StartCoroutine(TogglePowerUp(0.5f, "PU1"));
+                    powerUpCooldowns[1] = 0.2f;
+                    //myPowerUp.GetComponent<AudioSource>().Play();
+                    cannon.Shoot(direction);
+                }
+                else if (powerUpNum == 2 && powerUpCooldowns[2] <= 0)
+                {
+                    Debug.Log("Tank");
+                    //StartCoroutine(TogglePowerUp(4f, "PU2"));
+                    powerUpCooldowns[2] = 2;
+                    //myPowerUp.GetComponent<AudioSource>().Play();
+                    cannon.Shoot(direction);
+                }
+                else if (powerUpNum == 0 && powerUpCooldowns[0] <= 0)
+                {
+                    Debug.Log("Rookie");
+                    powerUpCooldowns[0] = 4;
+                    cannon.Shoot(direction);
+                }
+            }
+        }
+    }
+
+    [PunRPC]
+    public void ChangeCannon()
+    {
+        playerRenderer.sprite = powerUpSprites[powerUpNum - 1];
     }
 
     public IEnumerator TogglePowerUp(float duration, string powerUpName)
