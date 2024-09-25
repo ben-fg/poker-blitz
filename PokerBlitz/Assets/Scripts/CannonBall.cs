@@ -40,11 +40,11 @@ public class CannonBall : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        Debug.Log("Trigger");
-        if (collision.CompareTag("Ground"))
+        Debug.Log(collision);
+        if (collision.gameObject.CompareTag("Ground"))
         {
             Debug.Log("Ground");
-            Destroy(this);
+            Destroy(gameObject);
         }
     }
 }

@@ -53,7 +53,7 @@ public class CannonShoot : MonoBehaviour
 
     private IEnumerator DestroyCannonBall(GameObject cannonBall)
     {
-        yield return new WaitForSeconds(5);
+        yield return new WaitForSeconds(3);
         Destroy(cannonBall);
     }
 }

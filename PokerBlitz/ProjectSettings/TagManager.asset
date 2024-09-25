@@ -9,6 +9,7 @@ TagManager:
   - PU2
   - PU3
   - CannonBall
+  - Bullet
   layers:
   - Default
   - TransparentFX

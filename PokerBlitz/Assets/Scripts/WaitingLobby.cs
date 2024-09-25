@@ -2,11 +2,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using Photon.Pun;
 
 public class WaitingLobby : MonoBehaviour
 {
-    [SerializeField] private Text playerCount;
+    [SerializeField] private TextMeshProUGUI playerCount;
+    [SerializeField] private Button startButton;
     private int requiredPlayers = 2;
 
     void Start()
@@ -16,7 +18,19 @@ public class WaitingLobby : MonoBehaviour
 
     void Update()
     {
-        playerCount.text = PhotonNetwork.CurrentRoom.PlayerCount + "/4";
+        int currentPlayerCount = PhotonNetwork.CurrentRoom.PlayerCount;
+        playerCount.text = currentPlayerCount + "/4 Players";
+
+        if (currentPlayerCount != requiredPlayers)
+        {
+            startButton.GetComponent<Image>().color = Color.grey;
+            startButton.GetComponentInChildren<TextMeshProUGUI>().text = "Waiting...";
+        }
+        else
+        {
+            startButton.GetComponent<Image>().color = Color.green;
+            startButton.GetComponentInChildren<TextMeshProUGUI>().text = "Start (Host)";
+        }
     }
 
     public void StartGame()
