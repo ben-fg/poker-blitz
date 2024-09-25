@@ -10,7 +10,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 public class PowerUps : MonoBehaviour
 {
     Hashtable playerProperties = new Hashtable();
-    [SerializeField] GameObject[] powerUpButtons = new GameObject[3];
+    [SerializeField] GameObject powerUpButtons;
     [SerializeField] Sprite[,] powerUpSprites = new Sprite[2,3];
     [SerializeField] TextMeshProUGUI playerNameText;
     [SerializeField] TextMeshProUGUI timerText;
@@ -25,11 +25,12 @@ public class PowerUps : MonoBehaviour
         playerProperties["PowerUp"] = 4;
 
         //Create an order for mini game testing purposes
-        OrderForTesting();
+        //OrderForTesting();
     }
 
     void Update()
     {
+        /*
         if (currentTurn == 4)
         {
             PhotonNetwork.LoadLevel("Game" + GameMaster.gameNumber);
@@ -58,44 +59,39 @@ public class PowerUps : MonoBehaviour
         }
 
         timerText.text = timer.ToString("0");
+        */
     }
 
     private void ChangeButtonColours(Color colour)
     {
         for (int i = 0; i < 3; i++)
         {
-            powerUpButtons[i].GetComponent<Image>().color = colour;
+            //powerUpButtons[i].GetComponent<Image>().color = colour;
         }
     }
 
     public void PowerUp1()
     {
-        if (view.IsMine && yourTurn)
-        {
-            playerProperties["PowerUp"] = 1;
-            PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
-            PlayerPowerUps.selectionEnd = true;
-        }
+        playerProperties["PowerUp"] = 1;
+        PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
+        PlayerPowerUps.selectionEnd = true;
+        powerUpButtons.SetActive(false);
     }
 
     public void PowerUp2()
     {
-        if (view.IsMine && yourTurn)
-        {
-            playerProperties["PowerUp"] = 2;
-            PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
-            PlayerPowerUps.selectionEnd = true;
-        }
+        playerProperties["PowerUp"] = 2;
+        PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
+        PlayerPowerUps.selectionEnd = true;
+        powerUpButtons.SetActive(false);
     }
 
     public void PowerUp3()
     {
-        if (view.IsMine && yourTurn)
-        {
-            playerProperties["PowerUp"] = 3;
-            PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
-            PlayerPowerUps.selectionEnd = true;
-        }
+        playerProperties["PowerUp"] = 3;
+        PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
+        PlayerPowerUps.selectionEnd = true;
+        powerUpButtons.SetActive(false);
     }
 
     private void OrderForTesting()
