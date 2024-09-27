@@ -6,9 +6,11 @@ using Photon.Pun;
 public class CannonShoot : MonoBehaviour
 {
     [SerializeField] private GameObject cannonBall;
+    [SerializeField] private AudioClip[] gunSounds = new AudioClip[3];
     private float speed;
     private int damage;
     private int owner;
+    private string type;
     PhotonView view;
 
     void Start()
@@ -16,11 +18,12 @@ public class CannonShoot : MonoBehaviour
         view = GetComponent<PhotonView>();
     }
 
-    public void SetCannonProperties(float speed, int damage, int owner)
+    public void SetCannonProperties(float speed, int damage, int owner, string type)
     {
         this.speed = speed;
         this.damage = damage;
         this.owner = owner;
+        this.type = type;
     }
 
     public void Shoot(Vector2 direction)
@@ -39,10 +42,20 @@ public class CannonShoot : MonoBehaviour
         {
             GameObject currentCannonBall = PhotonNetwork.Instantiate(cannonBall.name, transform.position, Quaternion.identity);
             CannonBall cannonBallScript = currentCannonBall.GetComponent<CannonBall>();
-            if (damage == 100)
+            if (type == "Gunner")
             {
+                currentCannonBall.GetComponent<AudioSource>().clip = gunSounds[0];
+            }
+            else if (type == "Tank")
+            {
+                currentCannonBall.GetComponent<AudioSource>().clip = gunSounds[1];
                 currentCannonBall.transform.localScale = new Vector2(2.5f, 2.5f);
             }
+            else if (type == "Rookie")
+            {
+                currentCannonBall.GetComponent<AudioSource>().clip = gunSounds[2];
+            }
+            currentCannonBall.GetComponent<AudioSource>().Play();
             cannonBallScript.speed = speed;
             cannonBallScript.damage = damage;
             cannonBallScript.owner = owner;

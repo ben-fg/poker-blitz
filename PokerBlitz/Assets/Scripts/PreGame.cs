@@ -9,12 +9,13 @@ public class PreGame : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI[] preGameText = new TextMeshProUGUI[9];
     [SerializeField] private Image[] preGameImages = new Image[4];
-    [SerializeField] private Sprite[] preGameSprites = new Sprite[4]; //Turn into 2D array when more than one game is added
+    [SerializeField] private Sprite[] preGameSprites = new Sprite[3 * GameMaster.maxGames];
+    [SerializeField] private Sprite gameplaySprite;
     PhotonView view;
 
     void Start()
     {
-        GameMaster.gameNumber = 1; //For testing purposes
+        GameMaster.gameNumber = 2; //For testing purposes
 
         view = GetComponent<PhotonView>();
         if (GameMaster.gameNumber == 1)
@@ -29,9 +30,22 @@ public class PreGame : MonoBehaviour
             preGameText[7].text = "Jump again in mid-air. [Cooldown: 4s]";
             preGameText[8].text = "Tower Ascent";
         }
-        for (int i = 0; i < preGameImages.Length; i++)
+        if (GameMaster.gameNumber == 2)
         {
-            preGameImages[i].sprite = preGameSprites[i];
+            preGameText[0].text = "Shoot other players to eliminate them. First player to 20 eliminations wins.";
+            preGameText[1].text = "W - Move Up\nS - Move Down\nA - Move left\nD - Move right\nMouse - Aim\nLeft Click - Shoot";
+            preGameText[2].text = "Gunner";
+            preGameText[3].text = "Your shots fire rapidly at reduced damage";
+            preGameText[4].text = "Tank";
+            preGameText[5].text = "Gain extra health with high damage shots but at reduced fire rate.";
+            preGameText[6].text = "Chainsaw";
+            preGameText[7].text = "You cannot shoot but will deal immense damage when colliding with players.";
+            preGameText[8].text = "Cannons";
+        }
+        preGameImages[3].sprite = gameplaySprite;
+        for (int i = 0; i < preGameImages.Length - 1; i++)
+        {
+            preGameImages[i].sprite = GetSprite(GameMaster.gameNumber - 1, i);
         }
     }
 
@@ -40,11 +54,16 @@ public class PreGame : MonoBehaviour
         
     }
 
+    private Sprite GetSprite(int row, int column)
+    {
+        return preGameSprites[(row * 3) + column];
+    }
+
     public void HostStart()
     {
         if (PhotonNetwork.LocalPlayer.IsMasterClient)
         {
-            PhotonNetwork.LoadLevel("Game1");
+            PhotonNetwork.LoadLevel("PowerUps");
         }
     }
 }

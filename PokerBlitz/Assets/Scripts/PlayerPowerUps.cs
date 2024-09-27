@@ -18,6 +18,9 @@ public class PlayerPowerUps : MonoBehaviour
     [SerializeField] private Image abilityIcon;
     [SerializeField] private Sprite[] powerUpSprites = new Sprite[3];
     [SerializeField] private TextMeshProUGUI cooldown;
+    private float startCountdown = 5;
+    [SerializeField] private TextMeshProUGUI countdownText;
+    [SerializeField] private AudioSource music;
 
     private CannonShoot cannon;
     private Rigidbody2D playerRb;
@@ -37,10 +40,25 @@ public class PlayerPowerUps : MonoBehaviour
         {
             playerRenderer = GetComponentInChildren<SpriteRenderer>();
         }
+
+        selectionEnd = true;
     }
 
     void Update()
     {
+        if (startCountdown > 0)
+        {
+            countdownText.text = (startCountdown + 0.5).ToString("0");
+            startCountdown -= Time.deltaTime;
+        }
+        else if (startCountdown > -10)
+        {
+            countdownText.gameObject.SetActive(false);
+            music.Play();
+            PlayerMovement.isFrozen = false;
+            startCountdown = -20;
+        }
+
         if (GameMaster.gameNumber == 1)
         {
             //Debug.Log("num "+powerUpNum);
@@ -62,7 +80,6 @@ public class PlayerPowerUps : MonoBehaviour
                 abilityIcon.sprite = powerUpSprites[powerUpNum - 1];
                 abilityIcon.color = Color.white;
 
-                PlayerMovement.isFrozen = false;
                 selectionEnd = false;
             }
 
@@ -92,7 +109,7 @@ public class PlayerPowerUps : MonoBehaviour
                 }
 
                 //Applies the selected powerups ability
-                if (view.IsMine && (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift)))
+                if (!PlayerMovement.isFrozen && view.IsMine && (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift)))
                 {
                     if (powerUpNum == 1 && powerUpCooldowns[0] <= 0)
                     {
@@ -128,11 +145,11 @@ public class PlayerPowerUps : MonoBehaviour
                 playerRb = GetComponent<Rigidbody2D>();
                 if (powerUpNum == 1)
                 {
-                    cannon.SetCannonProperties(15, 25, view.Owner.ActorNumber);
+                    cannon.SetCannonProperties(15, 25, view.Owner.ActorNumber, "Gunner");
                 }
                 else if (powerUpNum == 2)
                 {
-                    cannon.SetCannonProperties(10, 100, view.Owner.ActorNumber);
+                    cannon.SetCannonProperties(10, 100, view.Owner.ActorNumber, "Tank");
                     GetComponent<CircleCollider2D>().radius = 1;
                 }
                 else if (powerUpNum == 3)
@@ -141,20 +158,23 @@ public class PlayerPowerUps : MonoBehaviour
                 }
                 else if (powerUpNum == 0)
                 {
-                    cannon.SetCannonProperties(12.5f, 50, view.Owner.ActorNumber);
+                    cannon.SetCannonProperties(12.5f, 50, view.Owner.ActorNumber, "Rookie");
                 }
-                PlayerMovement.isFrozen = false;
+
                 selectionEnd = false;
             }
 
-            //Counts down a cooldown (fire rate)
-            if (powerUpCooldowns[powerUpNum] > 0)
+            if (powerUpNum != 3)
             {
-                powerUpCooldowns[powerUpNum] -= Time.deltaTime;
+                //Counts down a cooldown (fire rate)
+                if (powerUpCooldowns[powerUpNum] > 0)
+                {
+                    powerUpCooldowns[powerUpNum] -= Time.deltaTime;
+                }
             }
 
             //Allows the player to shoot
-            if (view.IsMine && Input.GetKey(KeyCode.Mouse0))
+            if (!PlayerMovement.isFrozen && view.IsMine && Input.GetKey(KeyCode.Mouse0))
             {
                 //Vector2 direction = new Vector2(Mathf.Sin(Mathf.Abs(playerRenderer.transform.rotation.z) + 90), Mathf.Cos(Mathf.Abs(playerRenderer.transform.rotation.z) + 90));
                 Vector2 direction = playerRenderer.transform.right;
@@ -187,7 +207,10 @@ public class PlayerPowerUps : MonoBehaviour
     [PunRPC]
     public void ChangeCannon()
     {
-        playerRenderer.sprite = powerUpSprites[powerUpNum - 1];
+        if (powerUpNum != 0)
+        {
+            playerRenderer.sprite = powerUpSprites[powerUpNum - 1];
+        }
     }
 
     public IEnumerator TogglePowerUp(float duration, string powerUpName)

@@ -37,6 +37,7 @@ public class GameMaster : MonoBehaviour
     private PokerPlayer currentPokerPlayer;
 
     public static int gameNumber;
+    public const int maxGames = 2;
     /*
     For card denominations:
     (I'm sorry in advance but there's no way around this)

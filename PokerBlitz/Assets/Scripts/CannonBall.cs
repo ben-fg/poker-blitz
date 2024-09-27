@@ -8,6 +8,7 @@ public class CannonBall : MonoBehaviour
     internal float speed;
     internal int damage;
     internal int owner;
+    internal string type;
     internal Vector2 direction;
     PhotonView view;
 
@@ -40,11 +41,10 @@ public class CannonBall : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        Debug.Log(collision);
         if (collision.gameObject.CompareTag("Ground"))
         {
-            Debug.Log("Ground");
-            Destroy(gameObject);
+            gameObject.GetComponent<SpriteRenderer>().enabled = false;
+            gameObject.GetComponent<CircleCollider2D>().enabled = false;
         }
     }
 }
