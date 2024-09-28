@@ -31,10 +31,54 @@ public class PlayerSetup : MonoBehaviourPunCallbacks
         if (view.IsMine)
         {
             PhotonNetwork.NickName = PlayerPrefs.GetString("Username");
+            view.RPC("SetPlayerUsername", RpcTarget.AllBuffered, view.ViewID, PhotonNetwork.LocalPlayer.NickName);
         }
         AssignPlayerColour();
+    }
 
-        view.RPC("SetPlayerUsername", RpcTarget.AllBuffered, PhotonNetwork.NickName);
+    private SpriteRenderer FindSprite(GameObject parent)
+    {
+        if (parent.GetComponent<SpriteRenderer>() != null)
+        {
+            playerRenderer = parent.GetComponent<SpriteRenderer>();
+        }
+        else
+        {
+            playerRenderer = parent.GetComponentInChildren<SpriteRenderer>();
+        }
+        return playerRenderer;
+    }
+
+    public static T FindComponentInChildren<T>(GameObject parent, string childName) where T : Component
+    {
+        if (parent.GetComponent<T>() != null)
+        {
+            return parent.GetComponent<T>();
+        }
+
+        //Get all components of type T in this GameObject and its children
+        T[] components = parent.GetComponentsInChildren<T>();
+
+        //If you want just the first found component
+        if (components.Length > 0)
+        {
+            if (childName == "")
+            {
+                return components[0]; //Return the first found component
+            }
+            else
+            {
+                for (int i = 0; i < components.Length; i++)
+                {
+                    if (components[i].name == childName)
+                    {
+                        return components[i];
+                    }
+                }
+            }
+        }
+
+        return null; //Return null if not found
     }
 
     void AssignPlayerColour()
@@ -50,25 +94,29 @@ public class PlayerSetup : MonoBehaviourPunCallbacks
         };
         view.Owner.SetCustomProperties(playerProperties);
 
-        Debug.Log("Set Player Colour: " + colourIndex);
+        //Debug.Log("Set Player Colour: " + colourIndex);
 
         //Sync the color for all players
-        view.RPC("SetPlayerColour", RpcTarget.AllBuffered, colourIndex);
+        view.RPC("SetPlayerColour", RpcTarget.AllBuffered, view.ViewID, colourIndex);
     }
 
     [PunRPC]
-    public void SetPlayerColour(int colourIndex)
+    public void SetPlayerColour(int viewID, int colourIndex)
     {
-        Debug.Log($"Set player color to {playerColours[colourIndex]} for {view.Owner.NickName}");
+        //Debug.Log($"Set player color to {playerColours[colourIndex]} for {view.Owner.NickName}");
         //Access the owner of this PhotonView to get the player's custom properties
-        playerRenderer.color = playerColours[colourIndex];
+        PhotonView targetPhotonView = PhotonView.Find(viewID);
+        FindComponentInChildren<SpriteRenderer>(targetPhotonView.gameObject, "").color = playerColours[colourIndex];
+        //FindSprite(targetPhotonView.gameObject).color = playerColours[colourIndex];
     }
 
     [PunRPC]
-    public void SetPlayerUsername(string nickname)
+    public void SetPlayerUsername(int viewID, string nickname)
     {
-        // Update the username text
-        username.text = view.Owner.NickName;
-        Debug.Log("Set Player Username: " + nickname);
+        //Update the username text for all players
+        PhotonView targetPhotonView = PhotonView.Find(viewID);
+        FindComponentInChildren<TextMeshProUGUI>(targetPhotonView.gameObject, "Username").text = nickname;
+        //username.text = nickname;
+        //Debug.Log("Set Player Username: " + view.Owner.NickName);
     }
 }

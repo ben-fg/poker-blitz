@@ -71,7 +71,7 @@ public class PlayerMovement : MonoBehaviour
                     Vector3 direction = mousePosition - transform.position;
                     direction.z = 0;
                     float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-                    view.RPC("FaceMouseRPC", RpcTarget.All, angle);
+                    view.RPC("FaceMouseRPC", RpcTarget.All, view.ViewID, angle);
                 }
             }
 
@@ -146,9 +146,11 @@ public class PlayerMovement : MonoBehaviour
     }
 
     [PunRPC]
-    public void FaceMouseRPC(float angle)
+    public void FaceMouseRPC(int viewID, float angle)
     {
-        playerRenderer.transform.rotation = Quaternion.Euler(0, 0, angle);
+        PhotonView targetPhotonView = PhotonView.Find(viewID);
+        PlayerSetup.FindComponentInChildren<SpriteRenderer>(targetPhotonView.gameObject, "").transform.rotation = Quaternion.Euler(0, 0, angle);
+        //playerRenderer.transform.rotation = Quaternion.Euler(0, 0, angle);
     }
 
     public void SetSpeed(float speed)

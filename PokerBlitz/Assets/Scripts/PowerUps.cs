@@ -19,6 +19,7 @@ public class PowerUps : MonoBehaviour
     private int currentTurn = 1;
     private bool yourTurn;
     PhotonView view;
+    private bool sceneIsLoaded;
    
     void Start()
     {
@@ -31,6 +32,7 @@ public class PowerUps : MonoBehaviour
             powerUpButtons[i].GetComponent<Image>().sprite = GetSprite(GameMaster.gameNumber - 1, i);
         }
 
+        Debug.Log("Setting clear 0");
         currentPowerUpIcon.color = Color.clear;
 
         Zapper propertyZapper = GetComponent<Zapper>();
@@ -40,10 +42,35 @@ public class PowerUps : MonoBehaviour
 
     void Update()
     {
-        if (currentTurn == 4)
+        if (!sceneIsLoaded && PhotonNetwork.IsMasterClient && currentTurn == 4)
         {
             PhotonNetwork.LoadLevel("Game" + GameMaster.gameNumber);
+            sceneIsLoaded = true;
         }
+        //Debug.Log("View: " + view.IsMine);
+        //Debug.Log("Order: " + ((int)PhotonNetwork.LocalPlayer.CustomProperties["Order"] == currentTurn));
+        Player currentPlayer = GetPlayerWithProperty("Order", currentTurn);
+        if (currentPlayer == null)
+        {
+            yourTurn = false;
+            ChangeButtonColours(Color.HSVToRGB(0.2f, 0.2f, 0.2f));
+            view.RPC("ChangeText", RpcTarget.AllBuffered, "Odin");
+        }
+        else
+        {
+            if (currentPlayer.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+            {
+                yourTurn = true;
+                ChangeButtonColours(Color.white);
+                view.RPC("ChangeText", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer.NickName);
+            }
+            else
+            {
+                yourTurn = false;
+                ChangeButtonColours(Color.HSVToRGB(0.2f, 0.2f, 0.2f));
+            }
+        }
+        /*
         if (view.IsMine && (int)PhotonNetwork.LocalPlayer.CustomProperties["Order"] == currentTurn)
         {
             yourTurn = true;
@@ -55,6 +82,7 @@ public class PowerUps : MonoBehaviour
             yourTurn = false;
             ChangeButtonColours(Color.HSVToRGB(0.2f, 0.2f, 0.2f));
         }
+        */
         
         if (timer > 0)
         {
@@ -64,9 +92,16 @@ public class PowerUps : MonoBehaviour
         {
             timer = 10;
             currentTurn++;
+            Debug.Log(currentTurn);
         }
 
         timerText.text = (timer + 0.5).ToString("0");
+    }
+
+    [PunRPC]
+    public void ChangeText(string nickname)
+    {
+        playerNameText.text = nickname + " select your powerup.";
     }
 
     public Sprite GetSprite(int row, int column)
@@ -82,12 +117,28 @@ public class PowerUps : MonoBehaviour
         }
     }
 
+    public Player GetPlayerWithProperty(string property, object propertyValue)
+    {
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            if (player.CustomProperties.ContainsKey(property))
+            {
+                if ((int)player.CustomProperties[property] == (int)propertyValue)
+                {
+                    return player;
+                }
+            }
+        }
+        return null;
+    }
+
     public void PowerUp1()
     {
-        Debug.Log((int)PhotonNetwork.LocalPlayer.CustomProperties["Order"]);
-        Debug.Log(currentTurn);
+        //Debug.Log((int)PhotonNetwork.LocalPlayer.CustomProperties["Order"]);
+        //Debug.Log(currentTurn);
         if (view.IsMine && yourTurn)
         {
+            Debug.Log("Setting white 1");
             playerProperties["PowerUp"] = 1;
             PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
             currentPowerUpIcon.color = Color.white;
@@ -99,6 +150,7 @@ public class PowerUps : MonoBehaviour
     {
         if (view.IsMine && yourTurn)
         {
+            Debug.Log("Setting white 2");
             playerProperties["PowerUp"] = 2;
             PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
             currentPowerUpIcon.color = Color.white;
@@ -110,6 +162,7 @@ public class PowerUps : MonoBehaviour
     {
         if (view.IsMine && yourTurn)
         {
+            Debug.Log("Setting white 3");
             playerProperties["PowerUp"] = 3;
             PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
             currentPowerUpIcon.color = Color.white;
