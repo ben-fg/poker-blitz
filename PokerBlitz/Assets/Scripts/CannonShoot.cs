@@ -18,7 +18,7 @@ public class CannonShoot : MonoBehaviour
     public int maxHealth;
     public int kills;
     private int deaths;
-    [SerializeField] Transform[] randSpawnPos = new Transform[10];
+    [SerializeField] Vector2[] randSpawnPos = new Vector2[10];
     [SerializeField] AudioSource landedShot;
     [SerializeField] AudioSource death;
     [SerializeField] public TextMeshProUGUI healthCount;
@@ -197,7 +197,7 @@ public class CannonShoot : MonoBehaviour
 
     private void Respawn()
     {
-        gameObject.transform.position = randSpawnPos[Random.Range(0, randSpawnPos.Length)].position;
+        gameObject.transform.position = randSpawnPos[Random.Range(0, randSpawnPos.Length)];
         health = maxHealth;
         deaths++;
     }

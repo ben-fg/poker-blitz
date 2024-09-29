@@ -928,7 +928,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &781232613984414630
 Transform:
   m_ObjectHideFlags: 0
@@ -3580,16 +3580,16 @@ MonoBehaviour:
   maxHealth: 0
   kills: 0
   randSpawnPos:
-  - {fileID: 2006231457965615270}
-  - {fileID: 1278811844584437802}
-  - {fileID: 6209415598984831854}
-  - {fileID: 4104003008738336242}
-  - {fileID: 4821231679977655904}
-  - {fileID: 1541788761415610162}
-  - {fileID: 7078128605222546665}
-  - {fileID: 7459657079890159948}
-  - {fileID: 4435270288911085596}
-  - {fileID: 456053532656589111}
+  - {x: 0, y: 0}
+  - {x: -0.75, y: 9.25}
+  - {x: -13, y: 10.5}
+  - {x: -12, y: -5.59}
+  - {x: -6.5, y: -11.84}
+  - {x: 11.5, y: -12.59}
+  - {x: 11.75, y: 2.66}
+  - {x: 13.25, y: 13.41}
+  - {x: 5.25, y: 12.66}
+  - {x: 4.25, y: -4.84}
   landedShot: {fileID: 258045963733000836}
   death: {fileID: 4631059842467947689}
   healthCount: {fileID: 6863521290390845504}
