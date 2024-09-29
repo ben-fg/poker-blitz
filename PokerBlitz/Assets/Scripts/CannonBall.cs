@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 
-public class CannonBall : MonoBehaviour
+public class CannonBall : MonoBehaviour, IPunObservable
 {
     internal float speed;
     internal int damage;
@@ -22,11 +22,24 @@ public class CannonBall : MonoBehaviour
         transform.Translate(direction * speed * Time.deltaTime);
         //view.RPC("MoveForAll", RpcTarget.All);
     }
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting) // Local player is writing data
+        {
+            stream.SendNext(owner);
+        }
+        else // Other players are reading data
+        {
+            owner = (int)stream.ReceiveNext();
+        }
+    }
+
 
     [PunRPC]
     public void MoveForAll()
     {
         transform.Translate(direction * speed * Time.deltaTime);
+        //Debug.LogWarning(owner);
     }
 
     /*

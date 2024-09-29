@@ -139,26 +139,32 @@ public class PlayerPowerUps : MonoBehaviour
                 powerUpNum = (int)PhotonNetwork.LocalPlayer.CustomProperties["PowerUp"];
                 if (view.IsMine)
                 {
-                    view.RPC("ChangeCannon", RpcTarget.All);
-                }
-                cannon = GetComponent<CannonShoot>();
-                playerRb = GetComponent<Rigidbody2D>();
-                if (powerUpNum == 1)
-                {
-                    cannon.SetCannonProperties(15, 25, view.Owner.ActorNumber, "Gunner");
-                }
-                else if (powerUpNum == 2)
-                {
-                    cannon.SetCannonProperties(10, 100, view.Owner.ActorNumber, "Tank");
-                    GetComponent<CircleCollider2D>().radius = 1;
-                }
-                else if (powerUpNum == 3)
-                {
-                    playerMovement.SetSpeed(10);
-                }
-                else if (powerUpNum == 0)
-                {
-                    cannon.SetCannonProperties(12.5f, 50, view.Owner.ActorNumber, "Rookie");
+                    view.RPC("ChangeCannon", RpcTarget.All, view.ViewID);
+
+                    cannon = GetComponent<CannonShoot>();
+                    playerRb = GetComponent<Rigidbody2D>();
+                    if (powerUpNum == 1)
+                    {
+                        view.RPC("SetCannonPropertiesRPC", RpcTarget.AllBuffered, view.ViewID, 15f, 25, view.ViewID, "Gunner");
+                        //cannon.SetCannonProperties(15, 25, PhotonNetwork.LocalPlayer.ActorNumber, "Gunner");
+                        Debug.Log("Gunner owner: " + PhotonNetwork.LocalPlayer.ActorNumber);
+                    }
+                    else if (powerUpNum == 2)
+                    {
+                        view.RPC("SetCannonPropertiesRPC", RpcTarget.AllBuffered, view.ViewID, 10f, 100, view.ViewID, "Tank");
+                        //cannon.SetCannonProperties(10, 100, PhotonNetwork.LocalPlayer.ActorNumber, "Tank");
+                        GetComponent<CircleCollider2D>().radius = 1;
+                        Debug.Log("Tank owner: " + PhotonNetwork.LocalPlayer.ActorNumber);
+                    }
+                    else if (powerUpNum == 3)
+                    {
+                        playerMovement.SetSpeed(10);
+                    }
+                    else if (powerUpNum == 0)
+                    {
+                        view.RPC("SetCannonPropertiesRPC", RpcTarget.AllBuffered, view.ViewID, 12.5f, 50, view.ViewID, "Rookie");
+                        //cannon.SetCannonProperties(12.5f, 50, PhotonNetwork.LocalPlayer.ActorNumber, "Rookie");
+                    }
                 }
 
                 selectionEnd = false;
@@ -180,7 +186,7 @@ public class PlayerPowerUps : MonoBehaviour
                 Vector2 direction = playerRenderer.transform.right;
                 if (powerUpNum == 1 && powerUpCooldowns[1] <= 0)
                 {
-                    Debug.Log("Gunner");
+                    //Debug.Log("Gunner");
                     //StartCoroutine(TogglePowerUp(0.5f, "PU1"));
                     powerUpCooldowns[1] = 0.2f;
                     //myPowerUp.GetComponent<AudioSource>().Play();
@@ -188,7 +194,7 @@ public class PlayerPowerUps : MonoBehaviour
                 }
                 else if (powerUpNum == 2 && powerUpCooldowns[2] <= 0)
                 {
-                    Debug.Log("Tank");
+                    //Debug.Log("Tank");
                     //StartCoroutine(TogglePowerUp(4f, "PU2"));
                     powerUpCooldowns[2] = 2;
                     //myPowerUp.GetComponent<AudioSource>().Play();
@@ -196,8 +202,8 @@ public class PlayerPowerUps : MonoBehaviour
                 }
                 else if (powerUpNum == 0 && powerUpCooldowns[0] <= 0)
                 {
-                    Debug.Log("Rookie");
-                    powerUpCooldowns[0] = 4;
+                    //Debug.Log("Rookie");
+                    powerUpCooldowns[0] = 0.75f;
                     cannon.Shoot(direction);
                 }
             }
@@ -205,12 +211,21 @@ public class PlayerPowerUps : MonoBehaviour
     }
 
     [PunRPC]
-    public void ChangeCannon()
+    public void ChangeCannon(int viewID)
     {
         if (powerUpNum != 0)
         {
-            playerRenderer.sprite = powerUpSprites[powerUpNum - 1];
+            PhotonView targetPhotonView = PhotonView.Find(viewID);
+            SpriteRenderer cannonRen = PlayerSetup.FindComponentInChildren<SpriteRenderer>(targetPhotonView.gameObject, "");
+            cannonRen.sprite = powerUpSprites[powerUpNum - 1];
         }
+    }
+
+    [PunRPC]
+    public void SetCannonPropertiesRPC(int viewID, float speed, int damage, int owner, string type)
+    {
+        PhotonView targetPhotonView = PhotonView.Find(viewID);
+        targetPhotonView.gameObject.GetComponent<CannonShoot>().SetCannonProperties(speed, damage, owner, type);
     }
 
     public IEnumerator TogglePowerUp(float duration, string powerUpName)
