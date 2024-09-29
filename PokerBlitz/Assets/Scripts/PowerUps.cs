@@ -24,7 +24,7 @@ public class PowerUps : MonoBehaviour
     void Start()
     {
         view = GetComponent<PhotonView>();
-        playerProperties["PowerUp"] = 4;
+        playerProperties["PowerUp"] = 0;
         PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
 
         for (int i = 0; i < 3; i++)
@@ -54,15 +54,18 @@ public class PowerUps : MonoBehaviour
         {
             yourTurn = false;
             ChangeButtonColours(Color.HSVToRGB(0.2f, 0.2f, 0.2f));
-            view.RPC("ChangeText", RpcTarget.AllBuffered, "Odin");
+            //view.RPC("ChangeText", RpcTarget.AllBuffered, "Odin");
         }
         else
         {
             if (currentPlayer.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
             {
+                if (!yourTurn)
+                {
+                    view.RPC("ChangeText", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer.NickName);
+                }
                 yourTurn = true;
                 ChangeButtonColours(Color.white);
-                view.RPC("ChangeText", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer.NickName);
             }
             else
             {
@@ -90,7 +93,7 @@ public class PowerUps : MonoBehaviour
         }
         else
         {
-            timer = 10;
+            timer = 5;
             currentTurn++;
             Debug.Log(currentTurn);
         }

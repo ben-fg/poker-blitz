@@ -12,7 +12,7 @@ public class CreateAndJoinRooms : MonoBehaviourPunCallbacks
 
     void Start()
     {
-        PhotonNetwork.ConnectUsingSettings();
+
     }
 
     public void CreateRoom()
