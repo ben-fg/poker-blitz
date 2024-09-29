@@ -20,7 +20,10 @@ public class GameMaster : MonoBehaviour
     private Card[] boardCards = new Card[5];
     private Board board;
 
-    [SerializeField] private InputField testBox;
+    [SerializeField] private InputField raiseNumber;
+    [SerializeField] private Button raiseButton;
+    [SerializeField] private Button checkButton;
+    [SerializeField] private Button foldButton;
     private int activePokerPlayerIndex;
     private int sbIndex;
     private bool isPreFlop = true;
@@ -35,6 +38,11 @@ public class GameMaster : MonoBehaviour
     private int shift = 0;
     private int activeplayers = 4;
     private PokerPlayer currentPokerPlayer;
+
+    [SerializeField] private Image[] cardImgs = new Image[5 + (2 * 4)];
+    [SerializeField] private Sprite[] cardSprites = new Sprite[52];
+    private Dictionary<string, Sprite> cardSpriteDictionary;
+    private int cardSpriteElement = -8;
 
     public static int gameNumber;
     public const int maxGames = 2;
@@ -86,14 +94,154 @@ public class GameMaster : MonoBehaviour
         Card.Suit cardSuit = (Card.Suit)suit;
         Card uniqueCard = new Card(cardDenomination, cardSuit);
 
+        Sprite currentCard = GetCardSprite(cardDenomination, cardSuit);
+        if (cardSpriteElement >= 0)
+        {
+            cardImgs[cardSpriteElement].sprite = currentCard;
+        }
+        cardSpriteElement++;
+        if (cardSpriteElement == 13)
+        {
+            cardSpriteElement = 0;
+        }
+
         /*Debug.Log($"Generated unique card: Denomination {cardDenomination}, Suit {cardSuit}");*/
 
         return uniqueCard;
     }
 
+    public Sprite GetCardSprite(Card.Denomination denomination, Card.Suit suit)
+    {
+        string cardKey = $"{denomination}_of_{suit}";
+        return cardSpriteDictionary.ContainsKey(cardKey) ? cardSpriteDictionary[cardKey] : null;
+    }
+
+    public void handleRaise()
+    {
+        // If the SB raises in the preflop, the the rest of the small blind is taken
+        if (currentPokerPlayer.GetPosition().Equals(PokerPlayer.Position.SB) && board.GetCurrentStreet().Equals(Board.Street.Preflop) && excuteSB)
+        {
+            currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25 + 50);
+            PokerPlayer.SetPot(PokerPlayer.GetPot() + 25 - 50);
+            excuteSB = false;
+        }
+        // Get the raised amount from the text box
+        currentPokerPlayer.Raise(int.Parse(raiseNumber.text));
+
+        if (PokerPlayer.GetNumRaises() > 1)
+        {
+            Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()} more. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+        }
+        else
+        {
+            Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+        }
+
+        // Move to the next PokerPlayer
+        activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
+        currentPokerPlayer = players[activePokerPlayerIndex];
+        nextPokerPlayer = true;
+    }
+
+    public void handleCheck()
+    {
+        // If someone raised, and you pressed C, you will Call 
+        if (PokerPlayer.IsGlobalRaised())
+        {
+
+            // Manually detucts the 25 from the SB if he calls
+            if (currentPokerPlayer.GetPosition().Equals(PokerPlayer.Position.SB) && board.GetCurrentStreet().Equals(Board.Street.Preflop))
+            {
+                if (excuteSB)
+                {
+                    currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25);
+                    PokerPlayer.SetPot(PokerPlayer.GetPot() + 25);
+                    Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} with position {currentPokerPlayer.GetPosition()} called the rest of the blind, 25. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+                    excuteSB = false;
+                }
+
+                /* I know this does not make sense but trust me, it is a very silly edge case that I have to cover*/
+                if ((currentPokerPlayer.GetPreviousRaises() - 50) != 0)
+                {
+                    currentPokerPlayer.Call();
+                    PokerPlayer.DecreaseCallCounter();
+                    currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() + 50);
+                    PokerPlayer.SetPot(PokerPlayer.GetPot() - 50);
+                    Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises() - 50}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+
+                }
+                PokerPlayer.IncreaseCallCounter();
+            }
+            /*If it is the BB in the preflop, then it checks. It has to be inside the if (PokerPlayer.IsGlobalRaised())
+            because the GlobalRaised is not yet false because the call counter has not reached its goal*/
+            else if (currentPokerPlayer.GetPosition().Equals(PokerPlayer.Position.BB) && board.GetCurrentStreet().Equals(Board.Street.Preflop))
+            {
+                /* Another edge case */
+                if (PokerPlayer.GetNumRaises() > 1)
+                {
+                    currentPokerPlayer.Call();
+                    Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises()}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+                }
+                else
+                {
+                    currentPokerPlayer.Check();
+                    PokerPlayer.IncreaseCallCounter();
+                    Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} checked. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+                }
+
+            }
+            // Just a normal call
+            else
+            {
+                currentPokerPlayer.Call();
+                Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises()}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+
+            }
+
+            // Move to the next PokerPlayer
+            activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
+            currentPokerPlayer = players[activePokerPlayerIndex];
+            nextPokerPlayer = true;
+        }
+
+        // If no one raised, then normal check
+        else
+        {
+            currentPokerPlayer.Check();
+            Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} checked. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+
+            // Move to the next PokerPlayer
+            activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
+            currentPokerPlayer = players[activePokerPlayerIndex];
+            nextPokerPlayer = true;
+        }
+    }
+
+    public void handleFold()
+    {
+        currentPokerPlayer.Fold();
+        Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} folded. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+
+        // Move to the next PokerPlayer
+        activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
+        currentPokerPlayer = players[activePokerPlayerIndex];
+        activeplayers--;
+        nextPokerPlayer = true;
+    }
+
     //Start is called before the first frame update
     void Start()
     {
+        raiseNumber.gameObject.SetActive(false);
+        for (int i = 8; i < cardImgs.Length; i++)
+        {
+            cardImgs[i].gameObject.SetActive(false);
+        }
+        cardSpriteDictionary = new Dictionary<string, Sprite>();
+        foreach (Sprite sprite in cardSprites)
+        {
+            cardSpriteDictionary.Add(sprite.name, sprite);
+        }
 
         firstPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)0, 1);
         secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)1, 2);
@@ -101,6 +249,8 @@ public class GameMaster : MonoBehaviour
         fourthPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)3, 4);
 
     }
+
+    
 
     //Update is called once per frame
     void Update()
@@ -195,6 +345,11 @@ public class GameMaster : MonoBehaviour
                 // Shows the flop cards
                 Debug.Log(board.ToString());
 
+                for (int i = 8; i < 11; i++)
+                {
+                    cardImgs[i].gameObject.SetActive(true);
+                }
+
                 // To start the flop with the SB
                 activePokerPlayerIndex = sbIndex;
                 currentPokerPlayer = players[activePokerPlayerIndex];
@@ -213,6 +368,7 @@ public class GameMaster : MonoBehaviour
             {
                 Debug.Log("I am turning");
                 Debug.Log(board.ToString());
+                cardImgs[11].gameObject.SetActive(true);
                 activePokerPlayerIndex = sbIndex;
                 currentPokerPlayer = players[activePokerPlayerIndex];
                 isTurn = false;
@@ -226,6 +382,7 @@ public class GameMaster : MonoBehaviour
             {
                 Debug.Log("I am rivering");
                 Debug.Log(board.ToString());
+                cardImgs[12].gameObject.SetActive(true);
                 activePokerPlayerIndex = sbIndex;
                 currentPokerPlayer = players[activePokerPlayerIndex];
                 isRiver = false;
@@ -243,123 +400,15 @@ public class GameMaster : MonoBehaviour
                 nextPokerPlayer = false;
             }
 
-            // Checking for input
-            if (Input.GetKeyDown(KeyCode.R))
+            if (PokerPlayer.IsGlobalRaised())
             {
-                // If the SB raises in the preflop, the the rest of the small blind is taken
-                if (currentPokerPlayer.GetPosition().Equals(PokerPlayer.Position.SB) && board.GetCurrentStreet().Equals(Board.Street.Preflop) && excuteSB)
-                {
-                    currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25 + 50);
-                    PokerPlayer.SetPot(PokerPlayer.GetPot() + 25 - 50);
-                    excuteSB = false;
-                }
-                // Get the raised amount from the text box
-                currentPokerPlayer.Raise(int.Parse(testBox.text));
-
-                if (PokerPlayer.GetNumRaises() > 1)
-                {
-                    Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()} more. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                }
-                else
-                {
-                    Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                }
-
-                // Move to the next PokerPlayer
-                activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
-                currentPokerPlayer = players[activePokerPlayerIndex];
-                nextPokerPlayer = true;
+                raiseNumber.gameObject.SetActive(true);
             }
-            else if (Input.GetKeyDown(KeyCode.C))
+            else
             {
-
-                // If someone raised, and you pressed C, you will Call 
-                if (PokerPlayer.IsGlobalRaised())
-                {
-
-                    // Manually detucts the 25 from the SB if he calls
-                    if (currentPokerPlayer.GetPosition().Equals(PokerPlayer.Position.SB) && board.GetCurrentStreet().Equals(Board.Street.Preflop))
-                    {
-                        if (excuteSB)
-                        {
-                            currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25);
-                            PokerPlayer.SetPot(PokerPlayer.GetPot() + 25);
-                            Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} with position {currentPokerPlayer.GetPosition()} called the rest of the blind, 25. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                            excuteSB = false;
-                        }
-                        
-                       /* I know this does not make sense but trust me, it is a very silly edge case that I have to cover*/
-                        if ((currentPokerPlayer.GetPreviousRaises() - 50) != 0)
-                        {
-                            currentPokerPlayer.Call();
-                            PokerPlayer.DecreaseCallCounter();
-                            currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() + 50);
-                            PokerPlayer.SetPot(PokerPlayer.GetPot() - 50);
-                            Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises() - 50}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                            
-                        }
-                        PokerPlayer.IncreaseCallCounter();
-                    }
-                    /*If it is the BB in the preflop, then it checks. It has to be inside the if (PokerPlayer.IsGlobalRaised())
-                    because the GlobalRaised is not yet false because the call counter has not reached its goal*/
-                    else if (currentPokerPlayer.GetPosition().Equals(PokerPlayer.Position.BB) && board.GetCurrentStreet().Equals(Board.Street.Preflop))
-                    {
-                        /* Another edge case */
-                        if (PokerPlayer.GetNumRaises() > 1)
-                        {
-                            currentPokerPlayer.Call();
-                            Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises()}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                        }
-                        else
-                        {
-                            currentPokerPlayer.Check();
-                            PokerPlayer.IncreaseCallCounter();
-                            Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} checked. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                        }
-                        
-                    }
-                    // Just a normal call
-                    else
-                    {
-                        currentPokerPlayer.Call();
-                        Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises()}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-
-                    }
-
-                    // Move to the next PokerPlayer
-                    activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
-                    currentPokerPlayer = players[activePokerPlayerIndex];
-                    nextPokerPlayer = true;
-                }
-
-                // If no one raised, then normal check
-                else
-                {
-                    currentPokerPlayer.Check();
-                    Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} checked. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-
-                    // Move to the next PokerPlayer
-                    activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
-                    currentPokerPlayer = players[activePokerPlayerIndex];
-                    nextPokerPlayer = true;
-                }
-
-
-
+                raiseNumber.gameObject.SetActive(false);
             }
-
-            // Fold
-            else if (Input.GetKeyDown(KeyCode.F))
-            {
-                currentPokerPlayer.Fold();
-                Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} folded. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-
-                // Move to the next PokerPlayer
-                activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
-                currentPokerPlayer = players[activePokerPlayerIndex];
-                activeplayers--;
-                nextPokerPlayer = true;
-            }
+            
         }
 
         // If PokerPlayer is folded, then move to next PokerPlayer
