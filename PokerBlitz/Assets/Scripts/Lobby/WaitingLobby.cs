@@ -35,7 +35,7 @@ public class WaitingLobby : MonoBehaviour
 
     public void StartGame()
     {
-        if (PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.PlayerCount == requiredPlayers)
+        if (PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.PlayerCount >= requiredPlayers)
         {
             PhotonNetwork.LoadLevel("PreGame");
         }
