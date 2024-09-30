@@ -139,7 +139,7 @@ public class PlayerPowerUps : MonoBehaviour
                 powerUpNum = (int)PhotonNetwork.LocalPlayer.CustomProperties["PowerUp"];
                 if (view.IsMine)
                 {
-                    view.RPC("ChangeCannon", RpcTarget.All, view.ViewID);
+                    view.RPC("ChangeCannon", RpcTarget.All, view.ViewID, powerUpNum);
 
                     cannon = GetComponent<CannonShoot>();
                     playerRb = GetComponent<Rigidbody2D>();
@@ -211,7 +211,7 @@ public class PlayerPowerUps : MonoBehaviour
     }
 
     [PunRPC]
-    public void ChangeCannon(int viewID)
+    public void ChangeCannon(int viewID, int powerUpNum)
     {
         if (powerUpNum != 0)
         {

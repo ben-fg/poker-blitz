@@ -9,6 +9,7 @@ public class CannonShoot : MonoBehaviour
 {
     [SerializeField] private GameObject cannonBall;
     [SerializeField] private AudioClip[] gunSounds = new AudioClip[3];
+    [SerializeField] private AudioSource chainsaw;
     private float speed;
     private int damage;
     private int owner;
@@ -20,7 +21,7 @@ public class CannonShoot : MonoBehaviour
     private int deaths;
     [SerializeField] Vector2[] randSpawnPos = new Vector2[10];
     [SerializeField] AudioSource landedShot;
-    [SerializeField] AudioSource death;
+    [SerializeField] public AudioSource death;
     [SerializeField] public TextMeshProUGUI healthCount;
     [SerializeField] public TextMeshProUGUI killCount;
     [SerializeField] TextMeshProUGUI deathCount;
@@ -75,6 +76,11 @@ public class CannonShoot : MonoBehaviour
         this.damage = damage;
         this.owner = owner;
         this.type = type;
+    }
+
+    public string GetCannonType()
+    {
+        return type;
     }
 
     public void Shoot(Vector2 direction)
@@ -164,17 +170,17 @@ public class CannonShoot : MonoBehaviour
         //if (view.ViewID == shotOwner)
         if (true)
         {
+            PhotonView shooterPhotonView = PhotonView.Find(shotOwner);
+            CannonShoot shooter = shooterPhotonView.gameObject.GetComponent<CannonShoot>();
             Debug.Log(PhotonNetwork.LocalPlayer);
             //Player shotOwnerPlayer = PhotonNetwork.LocalPlayer;
             if (hitOrDeath == "HIT")
             {
-                landedShot.Play();
+                shooter.SoundEffect(hitOrDeath);
                 Debug.Log("Hit");
             }
             else if (hitOrDeath == "DEATH")
             {
-                PhotonView shooterPhotonView = PhotonView.Find(shotOwner);
-                CannonShoot shooter = shooterPhotonView.gameObject.GetComponent<CannonShoot>();
                 shooter.kills++;
                 shooter.health = shooter.maxHealth; //Restores health on a kill
                 Debug.Log(shooter.kills +" + "+shooter.maxHealth);
@@ -185,8 +191,9 @@ public class CannonShoot : MonoBehaviour
                 //Debug.Log(shotOwnerPlayer.GetComponent<CannonShoot>());
                 shotOwnerPlayer.gameObject.GetComponent<CannonShoot>().Kill();
                 */
-                Debug.Log("Death");
-                death.Play();
+                shooter.SoundEffect(hitOrDeath);
+                //Debug.Log("Death");
+                //death.Play();
             }
             else
             {
@@ -201,6 +208,47 @@ public class CannonShoot : MonoBehaviour
         health = maxHealth;
         deaths++;
     }
+
+    public void SoundEffect(string soundName)
+    {
+        if (view.IsMine)
+        {
+            if (soundName == "HIT")
+            {
+                landedShot.Play();
+            }
+            else if (soundName == "DEATH")
+            {
+                death.Play();
+            }
+        }
+    }
+
+    /*
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.collider.gameObject.GetComponent<CannonShoot>().GetCannonType() == "Chainsaw")
+        {
+            chainsaw.Play();
+        }
+    }
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        if (collision.collider.gameObject.GetComponent<CannonShoot>().GetCannonType() == "Chainsaw")
+        {
+            health -= 1;
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.collider.gameObject.GetComponent<CannonShoot>().GetCannonType() == "Chainsaw")
+        {
+            chainsaw.Stop();
+        }
+    }
+    */
 
     [PunRPC]
     public void Kill(int shotOwnerAN)
