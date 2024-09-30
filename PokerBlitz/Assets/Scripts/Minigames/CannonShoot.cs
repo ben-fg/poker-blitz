@@ -164,11 +164,12 @@ public class CannonShoot : MonoBehaviour
                 }
             }
         }
-
+        /*
         if (type != "Chainsaw" && collision.CompareTag("Saw"))
         {
             chainsaw.Play();
         }
+        */
     }
 
     [PunRPC]
@@ -232,7 +233,7 @@ public class CannonShoot : MonoBehaviour
             }
         }
     }
-
+    /*
     private void OnTriggerStay2D(Collider2D collision)
     {
         if (type != "Chainsaw" && collision.CompareTag("Saw"))
@@ -249,6 +250,7 @@ public class CannonShoot : MonoBehaviour
             chainsaw.Stop();
         }
     }
+    */
 
     [PunRPC]
     public void Kill(int shotOwnerAN)
