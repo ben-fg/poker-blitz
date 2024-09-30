@@ -46,7 +46,7 @@ public class CannonShoot : MonoBehaviour
         }
         else if (type == "Sniper")
         {
-            maxHealth = 50;
+            maxHealth = 75;
         }
         else if (type == "Rookie")
         {
