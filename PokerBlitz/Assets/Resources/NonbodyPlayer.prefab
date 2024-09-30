@@ -1286,7 +1286,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: e870a017b8b17ed45a92d5b1554a5f5f, type: 3}
   - {fileID: 21300000, guid: daa179ea22a7b6e4fac64f0b977ac0c7, type: 3}
   - {fileID: 21300000, guid: d043d63ea94df0543802175ed7b185fd, type: 3}
-  - {fileID: 21300000, guid: a62a7411d08805c42afdd66d9fa87736, type: 3}
+  - {fileID: 21300000, guid: 4d8aff34e114ba64d973e981c2504c48, type: 3}
   playerNameText: {fileID: 4956909855191721989}
   timerText: {fileID: 8841441785820756288}
   currentPowerUpIcon: {fileID: 7694132766723297205}

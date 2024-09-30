@@ -9,6 +9,7 @@ using Photon.Realtime;
 public class PlayerPowerUps : MonoBehaviour
 {
     private float[] powerUpCooldowns = new float[3];
+    private float extraCooldown;
     private PlayerMovement playerMovement;
     PhotonView view;
     private GameObject myPowerUp = null;
@@ -146,19 +147,21 @@ public class PlayerPowerUps : MonoBehaviour
                     if (powerUpNum == 1)
                     {
                         view.RPC("SetCannonPropertiesRPC", RpcTarget.AllBuffered, view.ViewID, 15f, 25, view.ViewID, "Gunner");
+                        playerMovement.SetSpeed(7.5f);
                         //cannon.SetCannonProperties(15, 25, PhotonNetwork.LocalPlayer.ActorNumber, "Gunner");
-                        Debug.Log("Gunner owner: " + PhotonNetwork.LocalPlayer.ActorNumber);
+                        //Debug.Log("Gunner owner: " + PhotonNetwork.LocalPlayer.ActorNumber);
                     }
                     else if (powerUpNum == 2)
                     {
                         view.RPC("SetCannonPropertiesRPC", RpcTarget.AllBuffered, view.ViewID, 10f, 100, view.ViewID, "Tank");
                         //cannon.SetCannonProperties(10, 100, PhotonNetwork.LocalPlayer.ActorNumber, "Tank");
                         GetComponent<CircleCollider2D>().radius = 1;
-                        Debug.Log("Tank owner: " + PhotonNetwork.LocalPlayer.ActorNumber);
+                        //Debug.Log("Tank owner: " + PhotonNetwork.LocalPlayer.ActorNumber);
                     }
                     else if (powerUpNum == 3)
                     {
-                        playerMovement.SetSpeed(10);
+                        view.RPC("SetCannonPropertiesRPC", RpcTarget.AllBuffered, view.ViewID, 30f, 75, view.ViewID, "Sniper");
+                        //GetChildByTag(GetComponent<Transform>(), "Saw").SetActive(true);
                     }
                     else if (powerUpNum == 0)
                     {
@@ -176,6 +179,13 @@ public class PlayerPowerUps : MonoBehaviour
                 if (powerUpCooldowns[powerUpNum] > 0)
                 {
                     powerUpCooldowns[powerUpNum] -= Time.deltaTime;
+                }
+            }
+            if (powerUpNum == 3)
+            {
+                if (extraCooldown > 0)
+                {
+                    extraCooldown -= Time.deltaTime;
                 }
             }
 
@@ -204,6 +214,12 @@ public class PlayerPowerUps : MonoBehaviour
                 {
                     //Debug.Log("Rookie");
                     powerUpCooldowns[0] = 0.75f;
+                    cannon.Shoot(direction);
+                }
+                else if (powerUpNum == 3 && extraCooldown <= 0)
+                {
+                    //Debug.Log("Rookie");
+                    extraCooldown = 1.5f;
                     cannon.Shoot(direction);
                 }
             }

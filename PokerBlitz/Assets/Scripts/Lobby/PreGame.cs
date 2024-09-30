@@ -38,8 +38,8 @@ public class PreGame : MonoBehaviour
             preGameText[3].text = "Your shots fire rapidly at reduced damage";
             preGameText[4].text = "Tank";
             preGameText[5].text = "Gain extra health with high damage shots but at reduced fire rate.";
-            preGameText[6].text = "Chainsaw";
-            preGameText[7].text = "You cannot shoot but will deal immense damage when colliding with players.";
+            preGameText[6].text = "Sniper";
+            preGameText[7].text = "Your shots travel very fast but you have less health.";
             preGameText[8].text = "Cannons";
         }
         preGameImages[3].sprite = gameplaySprite;

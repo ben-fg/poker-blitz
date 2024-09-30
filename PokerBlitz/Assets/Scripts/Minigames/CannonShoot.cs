@@ -8,7 +8,7 @@ using Photon.Realtime;
 public class CannonShoot : MonoBehaviour
 {
     [SerializeField] private GameObject cannonBall;
-    [SerializeField] private AudioClip[] gunSounds = new AudioClip[3];
+    [SerializeField] private AudioClip[] gunSounds = new AudioClip[4];
     [SerializeField] private AudioSource chainsaw;
     private float speed;
     private int damage;
@@ -44,9 +44,9 @@ public class CannonShoot : MonoBehaviour
         {
             maxHealth = 300;
         }
-        else if (type == "Chainsaw")
+        else if (type == "Sniper")
         {
-            maxHealth = 125;
+            maxHealth = 50;
         }
         else if (type == "Rookie")
         {
@@ -107,6 +107,10 @@ public class CannonShoot : MonoBehaviour
             currentCannonBall.GetComponent<AudioSource>().clip = gunSounds[1];
             currentCannonBall.transform.localScale = new Vector2(2.5f, 2.5f);
         }
+        else if (type == "Sniper")
+        {
+            currentCannonBall.GetComponent<AudioSource>().clip = gunSounds[3];
+        }
         else if (type == "Rookie")
         {
             currentCannonBall.GetComponent<AudioSource>().clip = gunSounds[2];
@@ -159,6 +163,11 @@ public class CannonShoot : MonoBehaviour
                     Respawn();
                 }
             }
+        }
+
+        if (type != "Chainsaw" && collision.CompareTag("Saw"))
+        {
+            chainsaw.Play();
         }
     }
 
@@ -224,31 +233,22 @@ public class CannonShoot : MonoBehaviour
         }
     }
 
-    /*
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void OnTriggerStay2D(Collider2D collision)
     {
-        if (collision.collider.gameObject.GetComponent<CannonShoot>().GetCannonType() == "Chainsaw")
+        if (type != "Chainsaw" && collision.CompareTag("Saw"))
         {
-            chainsaw.Play();
-        }
-    }
-
-    private void OnCollisionStay2D(Collision2D collision)
-    {
-        if (collision.collider.gameObject.GetComponent<CannonShoot>().GetCannonType() == "Chainsaw")
-        {
+            Debug.Log(health);
             health -= 1;
         }
     }
 
-    private void OnCollisionExit2D(Collision2D collision)
+    private void OnTriggerExit2D(Collider2D collision)
     {
-        if (collision.collider.gameObject.GetComponent<CannonShoot>().GetCannonType() == "Chainsaw")
+        if (type != "Chainsaw" && collision.CompareTag("Saw"))
         {
             chainsaw.Stop();
         }
     }
-    */
 
     [PunRPC]
     public void Kill(int shotOwnerAN)

@@ -2413,6 +2413,54 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &4167484469337500397
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6863592914045940282}
+  - component: {fileID: 6372712986735644843}
+  m_Layer: 0
+  m_Name: Saw
+  m_TagString: Saw
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &6863592914045940282
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4167484469337500397}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 10}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7106548558963205109}
+  m_RootOrder: 10
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!58 &6372712986735644843
+CircleCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4167484469337500397}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  serializedVersion: 2
+  m_Radius: 0.8
 --- !u!1 &4874310512105821023
 GameObject:
   m_ObjectHideFlags: 0
@@ -3467,6 +3515,7 @@ Transform:
   - {fileID: 8826428555377964701}
   - {fileID: 8417148422772319320}
   - {fileID: 781232613984414630}
+  - {fileID: 6863592914045940282}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -3635,7 +3684,7 @@ MonoBehaviour:
   powerUpSprites:
   - {fileID: 21300000, guid: 7e456fab63459844891717615a2b5d9c, type: 3}
   - {fileID: 21300000, guid: 9b7b9970ae6e2fa418d8d8b1cf8481c9, type: 3}
-  - {fileID: 21300000, guid: 367958ae7a9daf54e82c2d5450ef2e3f, type: 3}
+  - {fileID: 21300000, guid: 6a992c0f3cf0c074d90331e31c712df1, type: 3}
   cooldown: {fileID: 3967983944779194858}
   countdownText: {fileID: 5799081346513698367}
   music: {fileID: 538717471660428536}
@@ -3705,6 +3754,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 7ac09faee59643b4c94903705b729375, type: 3}
   - {fileID: 8300000, guid: 2c7d1aafe3453d14297943ed75cb49ea, type: 3}
   - {fileID: 8300000, guid: 3fc19378f5d1a4f4b8c93471502cbc56, type: 3}
+  - {fileID: 8300000, guid: 8fc030fb203139f49ae7905617d73c44, type: 3}
   chainsaw: {fileID: 6178242279385040733}
   health: 0
   maxHealth: 0
