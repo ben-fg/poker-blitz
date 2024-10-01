@@ -13,13 +13,13 @@ using Photon.Realtime;
 
 public class GameMaster : MonoBehaviour
 {
+    private PokerPlayer[] pokerPlayers = new PokerPlayer[4];
     private PokerPlayer firstPlayer;
     private PokerPlayer secondPlayer;
     private PokerPlayer thirdPlayer;
     private PokerPlayer fourthPlayer;
     private bool[,] deck = new bool[13, 4];
     private List<PokerPlayer> players = new List<PokerPlayer>();
-    private Player[] playerList = PhotonNetwork.PlayerList;
     private Card[] boardCards = new Card[5];
     private Board board;
 
@@ -51,7 +51,6 @@ public class GameMaster : MonoBehaviour
     private Dictionary<string, Sprite> cardSpriteDictionary;
     private int cardSpriteElement = -8;
     PhotonView view;
-    private int actorNumber;
 
     public static int gameNumber;
     public const int maxGames = 2;
@@ -85,7 +84,11 @@ public class GameMaster : MonoBehaviour
     void Start()
     {
         view = GetComponent<PhotonView>();
-        
+
+        if (!view.IsMine)
+        {
+            gameObject.SetActive(false);
+        }
 
         raiseNumber.gameObject.SetActive(false);
         for (int i = 8; i < cardImgs.Length; i++)
@@ -98,10 +101,11 @@ public class GameMaster : MonoBehaviour
             cardSpriteDictionary.Add(sprite.name, sprite);
         }
 
-        firstPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)0, 1);
-        secondPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)1, 2);
-        thirdPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)2, 3);
-        fourthPlayer = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)3, 4);
+        for (int i = 0; i < pokerPlayers.Length; i++)
+        {
+            pokerPlayers[i] = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)i, i+1);
+        }
+        
 
     }
 
@@ -118,7 +122,7 @@ public class GameMaster : MonoBehaviour
                 // Makes all the cards available 
                 deck = new bool[13, 4];
 
-                players.Clear();
+               /* players.Clear();*/
 
                 activeplayers = 4;
 
@@ -127,7 +131,39 @@ public class GameMaster : MonoBehaviour
 
                 shift = (4 - positionEnum) % 4;
 
-                firstPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
+               /* bool noFound = false;
+                Dictionary<int, bool> pocketStates = new Dictionary<int, bool>
+                {
+                    { 0, false },
+                    { 1, false },
+                    { 2, false },
+                    { 3, false }
+                };*/
+           /* if (PhotonNetwork.LocalPlayer.ActorNumber == i)*/
+                for (int i = 0; i < pokerPlayers.Length; i++)
+                {
+                    pokerPlayers[i].SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
+                    pokerPlayers[i].SetPosition((PokerPlayer.Position)((i + shift) % 4));
+                    /* pocketStates[i] = true;*/
+                    
+                    /*foreach (var state in pocketStates)
+                    {
+                        if (state.Value == false)
+                        {
+                            noFound = true;
+                            break;
+                        }
+                        else
+                        {
+                            noFound = false;
+                        }
+                    }
+                    if (noFound == true && i == 3)
+                    {
+                        i = 0;
+                    }*/
+                }
+                /*firstPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
                 secondPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
                 thirdPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
                 fourthPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
@@ -135,13 +171,13 @@ public class GameMaster : MonoBehaviour
                 firstPlayer.SetPosition((PokerPlayer.Position)((0 + shift) % 4));
                 secondPlayer.SetPosition((PokerPlayer.Position)((1 + shift) % 4));
                 thirdPlayer.SetPosition((PokerPlayer.Position)((2 + shift) % 4));
-                fourthPlayer.SetPosition((PokerPlayer.Position)((3 + shift) % 4));
+                fourthPlayer.SetPosition((PokerPlayer.Position)((3 + shift) % 4));*/
 
-                // Added all to a list
+                /*// Added all to a list
                 players.Add(firstPlayer);
                 players.Add(secondPlayer);
                 players.Add(thirdPlayer);
-                players.Add(fourthPlayer);
+                players.Add(fourthPlayer);*/
 
                 // Shows on screen the Pocket cards for every PokerPlayer
                 Debug.Log(firstPlayer.GetPocket().ToString());
@@ -273,7 +309,8 @@ public class GameMaster : MonoBehaviour
             // If PokerPlayer is folded, then move to next PokerPlayer
             else
             {
-                activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
+            /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
+                view.RPC("MoveToNextPlayer", RpcTarget.All);
                 currentPokerPlayer = players[activePokerPlayerIndex];
                 nextPokerPlayer = true;
 
@@ -382,7 +419,11 @@ public class GameMaster : MonoBehaviour
         Sprite currentCard = GetCardSprite(cardDenomination, cardSuit);
         if (cardSpriteElement >= 0)
         {
-            cardImgs[cardSpriteElement].sprite = currentCard;
+            if (view.IsMine)
+            {
+                cardImgs[cardSpriteElement].sprite = currentCard;
+            }
+           
         }
         cardSpriteElement++;
         if (cardSpriteElement == 13)
