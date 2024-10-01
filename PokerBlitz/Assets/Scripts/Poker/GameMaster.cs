@@ -44,7 +44,7 @@ public class GameMaster : MonoBehaviour
     [SerializeField] private Image[] cardImgs = new Image[5 + (2 * 4)];
     [SerializeField] private Sprite[] cardSprites = new Sprite[52];
     private Dictionary<string, Sprite> cardSpriteDictionary;
-    private int cardSpriteElement = -8;
+    private int cardSpriteElement = 0;
     PhotonView view;
 
     public static int gameNumber;
@@ -83,7 +83,6 @@ public class GameMaster : MonoBehaviour
         if (!view.IsMine)
         {
             PowerUps.HideUIForRemotePlayers(gameObject);
-            Debug.Log("Is it hiding");
         }
 
         raiseNumber.gameObject.SetActive(false);
@@ -127,20 +126,37 @@ public class GameMaster : MonoBehaviour
 
                 shift = (4 - positionEnum) % 4;
 
-               /* bool noFound = false;
-                Dictionary<int, bool> pocketStates = new Dictionary<int, bool>
-                {
-                    { 0, false },
-                    { 1, false },
-                    { 2, false },
-                    { 3, false }
-                };*/
-           /* if (PhotonNetwork.LocalPlayer.ActorNumber == i)*/
+            /* bool noFound = false;
+             Dictionary<int, bool> pocketStates = new Dictionary<int, bool>
+             {
+                 { 0, false },
+                 { 1, false },
+                 { 2, false },
+                 { 3, false }
+             };*/
+            /* if (PhotonNetwork.LocalPlayer.ActorNumber == i)*/
+            if (PhotonNetwork.IsMasterClient)
+            {
                 for (int i = 0; i < pokerPlayers.Length; i++)
+                {
+                    Card card1 = GenerateUniqueCard();
+                    Card card2 = GenerateUniqueCard();
+
+                    int card1Denom = (int)card1.GetDenomination();
+                    int card1Suit = (int) card1.GetSuit();
+                    int card2Denom = (int) card2.GetDenomination();
+                    int card2Suit = (int) card2.GetSuit();
+
+                    // Sync the card and position to all clients via an RPC
+                    view.RPC("SyncPlayerData", RpcTarget.All, shift, i, card1Denom, card1Suit, card2Denom, card2Suit);
+                }
+            }
+            
+            /*for (int i = 0; i < pokerPlayers.Length; i++)
                 {
                     pokerPlayers[i].SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
                     pokerPlayers[i].SetPosition((PokerPlayer.Position)((i + shift) % 4));
-                    /* pocketStates[i] = true;*/
+                    *//* pocketStates[i] = true;*/
                     
                     /*foreach (var state in pocketStates)
                     {
@@ -157,8 +173,8 @@ public class GameMaster : MonoBehaviour
                     if (noFound == true && i == 3)
                     {
                         i = 0;
-                    }*/
-                }
+                    }*//*
+                }*/
                 /*firstPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
                 secondPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
                 thirdPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
@@ -358,6 +374,18 @@ public class GameMaster : MonoBehaviour
     }
 
     [PunRPC]
+    void SyncPlayerData(int shift, int playerIndex, int card1denom, int card1suit, int card2denom, int card2suit)
+    {
+        Card card1 = new ((Card.Denomination) card1denom, (Card.Suit) card1suit);
+        Card card2 = new ((Card.Denomination)card2denom, (Card.Suit)card2suit);
+        SetCardSprite((Card.Denomination)card1denom, (Card.Suit)card1suit);
+        SetCardSprite((Card.Denomination)card2denom, (Card.Suit)(card2suit));
+        // Set the player's pocket and position
+        pokerPlayers[playerIndex].SetPocket(new(card1, card2));
+        pokerPlayers[playerIndex].SetPosition((PokerPlayer.Position)((playerIndex + shift) % 4));
+    }
+
+    [PunRPC]
     public void MoveToNextPlayer()
     {
         activePokerPlayerIndex = (activePokerPlayerIndex + 1) % pokerPlayers.Length;
@@ -412,26 +440,24 @@ public class GameMaster : MonoBehaviour
         Card.Suit cardSuit = (Card.Suit)suit;
         Card uniqueCard = new Card(cardDenomination, cardSuit);
 
+        /*Debug.Log($"Generated unique card: Denomination {cardDenomination}, Suit {cardSuit}");*/
+
+        return uniqueCard;
+    }
+
+    public void SetCardSprite(Card.Denomination cardDenomination, Card.Suit cardSuit)
+    {
         Sprite currentCard = GetCardSprite(cardDenomination, cardSuit);
         if (cardSpriteElement >= 0)
         {
-            if (view.IsMine)
-            {
-                cardImgs[cardSpriteElement].sprite = currentCard;
-            }
-           
+            cardImgs[cardSpriteElement].sprite = currentCard;
         }
         cardSpriteElement++;
         if (cardSpriteElement == 13)
         {
             cardSpriteElement = 0;
         }
-
-        /*Debug.Log($"Generated unique card: Denomination {cardDenomination}, Suit {cardSuit}");*/
-
-        return uniqueCard;
     }
-
     public Sprite GetCardSprite(Card.Denomination denomination, Card.Suit suit)
     {
         string cardKey = $"{denomination}_of_{suit}";
