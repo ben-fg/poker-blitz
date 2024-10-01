@@ -85,10 +85,7 @@ public class GameMaster : MonoBehaviour
     {
         view = GetComponent<PhotonView>();
 
-        if (!view.IsMine)
-        {
-            gameObject.SetActive(false);
-        }
+        PowerUps.HideUIForRemotePlayers(gameObject);
 
         raiseNumber.gameObject.SetActive(false);
         for (int i = 8; i < cardImgs.Length; i++)
