@@ -14,12 +14,7 @@ using Photon.Realtime;
 public class GameMaster : MonoBehaviour
 {
     private PokerPlayer[] pokerPlayers = new PokerPlayer[4];
-    private PokerPlayer firstPlayer;
-    private PokerPlayer secondPlayer;
-    private PokerPlayer thirdPlayer;
-    private PokerPlayer fourthPlayer;
     private bool[,] deck = new bool[13, 4];
-    private List<PokerPlayer> players = new List<PokerPlayer>();
     private Card[] boardCards = new Card[5];
     private Board board;
 
@@ -85,7 +80,11 @@ public class GameMaster : MonoBehaviour
     {
         view = GetComponent<PhotonView>();
 
-        PowerUps.HideUIForRemotePlayers(gameObject);
+        if (!view.IsMine)
+        {
+            PowerUps.HideUIForRemotePlayers(gameObject);
+            Debug.Log("Is it hiding");
+        }
 
         raiseNumber.gameObject.SetActive(false);
         for (int i = 8; i < cardImgs.Length; i++)
@@ -176,11 +175,11 @@ public class GameMaster : MonoBehaviour
                 players.Add(thirdPlayer);
                 players.Add(fourthPlayer);*/
 
-                // Shows on screen the Pocket cards for every PokerPlayer
+                /*// Shows on screen the Pocket cards for every PokerPlayer
                 Debug.Log(firstPlayer.GetPocket().ToString());
                 Debug.Log(secondPlayer.GetPocket().ToString());
                 Debug.Log(thirdPlayer.GetPocket().ToString());
-                Debug.Log(fourthPlayer.GetPocket().ToString());
+                Debug.Log(fourthPlayer.GetPocket().ToString());*/
 
                 // Generates cards for the board
                 for (int i = 0; i < 5; i++)
@@ -196,7 +195,7 @@ public class GameMaster : MonoBehaviour
                 // To change the starting PokerPlayer each round based on who is the SB
                 activePokerPlayerIndex = (0 + positionEnum) % 4;
                 sbIndex = activePokerPlayerIndex;
-                currentPokerPlayer = players[activePokerPlayerIndex];
+                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
 
                 // Manually processes the small blind
                 currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25);
@@ -205,7 +204,7 @@ public class GameMaster : MonoBehaviour
                 // Move to big blind
                 /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
                 view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = players[activePokerPlayerIndex];
+                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
 
                 // Big Blind buts in his big blind
                 currentPokerPlayer.Raise(BigBlind);
@@ -213,7 +212,7 @@ public class GameMaster : MonoBehaviour
                 // Move to next PokerPlayer
                 /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
                 view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = players[activePokerPlayerIndex];
+                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
                 Debug.Log(" blinds played");
                 PokerPlayer.DecreaseCallCounter();
 
@@ -244,7 +243,7 @@ public class GameMaster : MonoBehaviour
 
                     // To start the flop with the SB
                     activePokerPlayerIndex = sbIndex;
-                    currentPokerPlayer = players[activePokerPlayerIndex];
+                    currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
 
                     /* Now isTurn is true but cannot access the turn cards unless the street is incremented
                        If raised, it will not be ablt to show the turn cards 
@@ -262,7 +261,7 @@ public class GameMaster : MonoBehaviour
                     Debug.Log(board.ToString());
                     cardImgs[11].gameObject.SetActive(true);
                     activePokerPlayerIndex = sbIndex;
-                    currentPokerPlayer = players[activePokerPlayerIndex];
+                    currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
                     isTurn = false;
                     isRiver = true;
                 }
@@ -276,7 +275,7 @@ public class GameMaster : MonoBehaviour
                     Debug.Log(board.ToString());
                     cardImgs[12].gameObject.SetActive(true);
                     activePokerPlayerIndex = sbIndex;
-                    currentPokerPlayer = players[activePokerPlayerIndex];
+                    currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
                     isRiver = false;
                 }
             }
@@ -308,7 +307,7 @@ public class GameMaster : MonoBehaviour
             {
             /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
                 view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = players[activePokerPlayerIndex];
+                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
                 nextPokerPlayer = true;
 
             }
@@ -319,7 +318,7 @@ public class GameMaster : MonoBehaviour
                 PokerPlayer.ResetGlobals();
 
                 // Resets the isChecked flag to false, raise to 0, and amountCalled to 0
-                foreach (var pokerPlayer in players)
+                foreach (var pokerPlayer in pokerPlayers)
                 {
                     pokerPlayer.Reset();
                 }
@@ -327,7 +326,7 @@ public class GameMaster : MonoBehaviour
                 // However if it is also on the showdown, that means the game has ended and a new hand is dealt
                 if (board.GetCurrentStreet().Equals(Board.Street.Showdown))
                 {
-                    foreach (var pokerPlayer in players)
+                    foreach (var pokerPlayer in pokerPlayers)
                     {
                         pokerPlayer.Unfold();
                     }
@@ -342,11 +341,11 @@ public class GameMaster : MonoBehaviour
 
             }
 
-            if (PokerPlayer.GetFoldCounter() == (players.Count - 1))
+            if (PokerPlayer.GetFoldCounter() == (pokerPlayers.Length - 1))
             {
 
                 PokerPlayer.ResetGlobals();
-                foreach (var pokerPlayer in players)
+                foreach (var pokerPlayer in pokerPlayers)
                 {
                     pokerPlayer.Reset();
                     pokerPlayer.Unfold();
@@ -361,7 +360,7 @@ public class GameMaster : MonoBehaviour
     [PunRPC]
     public void MoveToNextPlayer()
     {
-        activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;
+        activePokerPlayerIndex = (activePokerPlayerIndex + 1) % pokerPlayers.Length;
     }
 
     [PunRPC]
@@ -466,7 +465,7 @@ public class GameMaster : MonoBehaviour
             // Move to the next PokerPlayer
             /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
             view.RPC("MoveToNextPlayer", RpcTarget.All);
-            currentPokerPlayer = players[activePokerPlayerIndex];
+            currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
             nextPokerPlayer = true;
         }
 
@@ -539,7 +538,7 @@ public class GameMaster : MonoBehaviour
                 // Move to the next PokerPlayer
                 /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
                 view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = players[activePokerPlayerIndex];
+                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
                 nextPokerPlayer = true;
             }
 
@@ -553,7 +552,7 @@ public class GameMaster : MonoBehaviour
                 // Move to the next PokerPlayer
                 /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
                 view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = players[activePokerPlayerIndex];
+                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
                 nextPokerPlayer = true;
             }
         }
@@ -571,7 +570,7 @@ public class GameMaster : MonoBehaviour
             // Move to the next PokerPlayer
             /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
             view.RPC("MoveToNextPlayer", RpcTarget.All);
-            currentPokerPlayer = players[activePokerPlayerIndex];
+            currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
             activeplayers--;
             nextPokerPlayer = true;
         }
