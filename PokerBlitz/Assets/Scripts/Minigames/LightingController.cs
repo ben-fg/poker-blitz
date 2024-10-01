@@ -22,6 +22,9 @@ public class LightingController : MonoBehaviour
     public float scaleFactor = 2.0f; // how quickly dark changes to light
 
     private float sunRiseHeight = 5f; // The height where the sun is fully risen
+    public TextMeshProUGUI instructionText;
+    public TextMeshProUGUI scoreboardText;
+    private bool updated = false;
 
     void Start()
     {
@@ -47,6 +50,16 @@ public class LightingController : MonoBehaviour
         // change intensity and color based on sun progress
         foregroundLight.intensity = Mathf.Lerp(minIntensity, maxIntensity, sunProgress);
         foregroundLight.color = Color.Lerp(nightColor, dayColor, sunProgress);
+
+        Color color = instructionText.color;
+        if (updated == false && transform.position.y > 2.2f)
+        {
+            //audioSource.PlayOneShot(gunshotEffect);
+            color.a = 1;
+            instructionText.color = color;
+            scoreboardText.color = color;
+            updated = true;
+        }
     }
 }
 
