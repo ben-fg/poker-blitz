@@ -161,7 +161,7 @@ public class PlayerPowerUps : MonoBehaviour
                     else if (powerUpNum == 3)
                     {
                         view.RPC("SetCannonPropertiesRPC", RpcTarget.AllBuffered, view.ViewID, 40f, 100, view.ViewID, "Sniper");
-                        GetComponentInChildren<Camera>().orthographicSize = 7;
+                        GetComponentInChildren<Camera>().orthographicSize = 8;
                         //GetChildByTag(GetComponent<Transform>(), "Saw").SetActive(true);
                     }
                     else if (powerUpNum == 0)

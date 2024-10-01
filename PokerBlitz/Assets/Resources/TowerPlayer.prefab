@@ -1972,6 +1972,7 @@ MonoBehaviour:
   - {fileID: 0}
   playerNameText: {fileID: 0}
   timerText: {fileID: 0}
+  currentPowerUpIcon: {fileID: 0}
 --- !u!1 &8325041240586516786
 GameObject:
   m_ObjectHideFlags: 0

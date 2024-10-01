@@ -24,6 +24,12 @@ public class PowerUps : MonoBehaviour
     void Start()
     {
         view = GetComponent<PhotonView>();
+
+        if (!view.IsMine)
+        {
+            HideUIForRemotePlayers(gameObject);
+        }
+
         playerProperties["PowerUp"] = 0;
         PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
 
@@ -38,14 +44,35 @@ public class PowerUps : MonoBehaviour
         Zapper propertyZapper = GetComponent<Zapper>();
         //Create an order for mini game testing purposes
         propertyZapper.OrderForTesting();
+
+        if (PhotonNetwork.IsMasterClient)
+        {
+            Hashtable props = new Hashtable
+            {
+                { "sceneIsLoaded", false }
+            };
+            PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        }
     }
 
     void Update()
     {
+        //Check if the scene has already been loaded globally
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("sceneIsLoaded"))
+            return;
+
+        bool sceneIsLoaded = (bool)PhotonNetwork.CurrentRoom.CustomProperties["sceneIsLoaded"];
+
         if (!sceneIsLoaded && PhotonNetwork.IsMasterClient && currentTurn == 4)
         {
+            //Load the level and set the global property to true
             PhotonNetwork.LoadLevel("Game" + GameMaster.gameNumber);
-            sceneIsLoaded = true;
+
+            Hashtable props = new Hashtable
+            {
+                { "sceneIsLoaded", true }
+            };
+            PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         }
         //Debug.Log("View: " + view.IsMine);
         //Debug.Log("Order: " + ((int)PhotonNetwork.LocalPlayer.CustomProperties["Order"] == currentTurn));
@@ -99,6 +126,22 @@ public class PowerUps : MonoBehaviour
         }
 
         timerText.text = (timer + 0.5).ToString("0");
+    }
+
+    public static void HideUIForRemotePlayers(GameObject remoteObject)
+    {
+        //Find the UI components in the player's prefab and disable it
+        Canvas playerUI = remoteObject.GetComponentInChildren<Canvas>();
+        if (playerUI != null)
+        {
+            playerUI.gameObject.SetActive(false);
+        }
+        //Do the same with the camera
+        Camera playerCamera = remoteObject.GetComponentInChildren<Camera>();
+        if (playerCamera != null)
+        {
+            playerCamera.gameObject.SetActive(false);
+        }
     }
 
     [PunRPC]
