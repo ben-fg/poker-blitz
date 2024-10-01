@@ -94,6 +94,10 @@ public class GameMaster : MonoBehaviour
         foreach (Sprite sprite in cardSprites)
         {
             cardSpriteDictionary.Add(sprite.name, sprite);
+            foreach (var kvp in cardSpriteDictionary)
+            {
+                Debug.Log($"Key: {kvp.Key}, Value: {kvp.Value.name}"); // Assuming Value is a Sprite
+            }
         }
 
         for (int i = 0; i < pokerPlayers.Length; i++)
@@ -137,6 +141,7 @@ public class GameMaster : MonoBehaviour
             /* if (PhotonNetwork.LocalPlayer.ActorNumber == i)*/
             if (PhotonNetwork.IsMasterClient)
             {
+
                 for (int i = 0; i < pokerPlayers.Length; i++)
                 {
                     Card card1 = GenerateUniqueCard();
