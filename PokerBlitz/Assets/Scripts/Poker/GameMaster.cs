@@ -18,6 +18,7 @@ public class GameMaster : MonoBehaviour
     private Card[] boardCards = new Card[5];
     private Board board;
 
+    [SerializeField] private Button myButton;
     [SerializeField] private InputField raiseNumber;
     [SerializeField] private Button raiseButton;
     [SerializeField] private Button checkButton;
@@ -94,18 +95,18 @@ public class GameMaster : MonoBehaviour
         foreach (Sprite sprite in cardSprites)
         {
             cardSpriteDictionary.Add(sprite.name, sprite);
-            foreach (var kvp in cardSpriteDictionary)
-            {
-                Debug.Log($"Key: {kvp.Key}, Value: {kvp.Value.name}"); // Assuming Value is a Sprite
-            }
+        }
+        foreach (var kvp in cardSpriteDictionary)
+        {
+            Debug.Log($"Key: {kvp.Key}, Value: {kvp.Value.name}"); // Assuming Value is a Sprite
         }
 
         for (int i = 0; i < pokerPlayers.Length; i++)
         {
             pokerPlayers[i] = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)i, i+1);
         }
-        
 
+        myButton.onClick.AddListener(HandleCheck);
     }
 
    
@@ -121,7 +122,7 @@ public class GameMaster : MonoBehaviour
                 // Makes all the cards available 
                 deck = new bool[13, 4];
 
-               /* players.Clear();*/
+              
 
                 activeplayers = 4;
 
@@ -130,15 +131,7 @@ public class GameMaster : MonoBehaviour
 
                 shift = (4 - positionEnum) % 4;
 
-            /* bool noFound = false;
-             Dictionary<int, bool> pocketStates = new Dictionary<int, bool>
-             {
-                 { 0, false },
-                 { 1, false },
-                 { 2, false },
-                 { 3, false }
-             };*/
-            /* if (PhotonNetwork.LocalPlayer.ActorNumber == i)*/
+            
             if (PhotonNetwork.IsMasterClient)
             {
 
@@ -156,51 +149,12 @@ public class GameMaster : MonoBehaviour
                     view.RPC("SyncPlayerData", RpcTarget.All, shift, i, card1Denom, card1Suit, card2Denom, card2Suit);
                 }
             }
-            
-            /*for (int i = 0; i < pokerPlayers.Length; i++)
-                {
-                    pokerPlayers[i].SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
-                    pokerPlayers[i].SetPosition((PokerPlayer.Position)((i + shift) % 4));
-                    *//* pocketStates[i] = true;*/
-                    
-                    /*foreach (var state in pocketStates)
-                    {
-                        if (state.Value == false)
-                        {
-                            noFound = true;
-                            break;
-                        }
-                        else
-                        {
-                            noFound = false;
-                        }
-                    }
-                    if (noFound == true && i == 3)
-                    {
-                        i = 0;
-                    }*//*
-                }*/
-                /*firstPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
-                secondPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
-                thirdPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
-                fourthPlayer.SetPocket(new(GenerateUniqueCard(), GenerateUniqueCard()));
 
-                firstPlayer.SetPosition((PokerPlayer.Position)((0 + shift) % 4));
-                secondPlayer.SetPosition((PokerPlayer.Position)((1 + shift) % 4));
-                thirdPlayer.SetPosition((PokerPlayer.Position)((2 + shift) % 4));
-                fourthPlayer.SetPosition((PokerPlayer.Position)((3 + shift) % 4));*/
-
-                /*// Added all to a list
-                players.Add(firstPlayer);
-                players.Add(secondPlayer);
-                players.Add(thirdPlayer);
-                players.Add(fourthPlayer);*/
-
-                /*// Shows on screen the Pocket cards for every PokerPlayer
-                Debug.Log(firstPlayer.GetPocket().ToString());
-                Debug.Log(secondPlayer.GetPocket().ToString());
-                Debug.Log(thirdPlayer.GetPocket().ToString());
-                Debug.Log(fourthPlayer.GetPocket().ToString());*/
+            // Shows on screen the Pocket cards for every PokerPlayer
+            Debug.Log(pokerPlayers[0].GetPocket().ToString());
+            Debug.Log(pokerPlayers[1].GetPocket().ToString());
+            Debug.Log(pokerPlayers[2].GetPocket().ToString());
+            Debug.Log(pokerPlayers[3].GetPocket().ToString());
 
                 // Generates cards for the board
                 for (int i = 0; i < 5; i++)
@@ -383,11 +337,17 @@ public class GameMaster : MonoBehaviour
     {
         Card card1 = new ((Card.Denomination) card1denom, (Card.Suit) card1suit);
         Card card2 = new ((Card.Denomination)card2denom, (Card.Suit)card2suit);
-        SetCardSprite((Card.Denomination)card1denom, (Card.Suit)card1suit);
-        SetCardSprite((Card.Denomination)card2denom, (Card.Suit)(card2suit));
         // Set the player's pocket and position
         pokerPlayers[playerIndex].SetPocket(new(card1, card2));
         pokerPlayers[playerIndex].SetPosition((PokerPlayer.Position)((playerIndex + shift) % 4));
+
+        // Update the UI only on the local player's client
+        if (view.IsMine && playerIndex == PhotonNetwork.LocalPlayer.ActorNumber - 1)
+        {
+            SetCardSprite((Card.Denomination)card1denom, (Card.Suit)card1suit);
+            SetCardSprite((Card.Denomination)card2denom, (Card.Suit)card2suit);
+            Debug.LogError("I drew my card");
+        }
     }
 
     [PunRPC]
@@ -469,7 +429,7 @@ public class GameMaster : MonoBehaviour
         return cardSpriteDictionary.ContainsKey(cardKey) ? cardSpriteDictionary[cardKey] : null;
     }
 
-    public void handleRaise()
+    public void HandleRaise()
     {
         if (view.IsMine)
         {
@@ -504,8 +464,15 @@ public class GameMaster : MonoBehaviour
 
     
 
-    public void handleCheck()
+    public void HandleCheck()
     {
+        
+        
+        if (view == null)
+        {
+            Debug.LogError("PhotonView is not initialized. Ensure this script is attached to a GameObject with a PhotonView component.");
+            return; // Exit if the PhotonView is null
+        }
         if (view.IsMine)
         {
             // If someone raised, and you pressed C, you will Call 
@@ -590,7 +557,7 @@ public class GameMaster : MonoBehaviour
 
     }
 
-    public void handleFold()
+    public void HandleFold()
     {
         if (view.IsMine)
         {
