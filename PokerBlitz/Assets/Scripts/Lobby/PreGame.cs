@@ -15,8 +15,6 @@ public class PreGame : MonoBehaviour
 
     void Start()
     {
-        GameMaster.gameNumber = 1; //For testing purposes
-
         view = GetComponent<PhotonView>();
         if (GameMaster.gameNumber == 1)
         {
@@ -63,7 +61,7 @@ public class PreGame : MonoBehaviour
     {
         if (PhotonNetwork.LocalPlayer.IsMasterClient)
         {
-            PhotonNetwork.LoadLevel("PoweUps");
+            PhotonNetwork.LoadLevel("PowerUps");
         }
     }
 }

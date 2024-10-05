@@ -4,7 +4,7 @@ using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
 
-public class NetworkCursor : MonoBehaviourPun, IPunObservable
+public class NetworkCursor : MonoBehaviourPun
 {
     public GameObject cursorPrefab;
     private GameObject cursorInstance;
@@ -23,6 +23,7 @@ public class NetworkCursor : MonoBehaviourPun, IPunObservable
         }
     }
 
+    /*
     void Update()
     {
         if (photonView.IsMine)
@@ -60,4 +61,5 @@ public class NetworkCursor : MonoBehaviourPun, IPunObservable
             transform.position = (Vector3)stream.ReceiveNext();
         }
     }
+    */
 }
