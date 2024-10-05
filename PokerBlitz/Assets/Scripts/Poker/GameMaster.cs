@@ -18,7 +18,7 @@ public class GameMaster : MonoBehaviour
     private Card[] boardCards = new Card[5];
     private Board board;
 
-    [SerializeField] private Button myButton;
+ 
     [SerializeField] private InputField raiseNumber;
     [SerializeField] private Button raiseButton;
     [SerializeField] private Button checkButton;
@@ -106,7 +106,7 @@ public class GameMaster : MonoBehaviour
             pokerPlayers[i] = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)i, i+1);
         }
 
-        myButton.onClick.AddListener(HandleCheck);
+  
     }
 
    
@@ -350,38 +350,7 @@ public class GameMaster : MonoBehaviour
         }
     }
 
-    [PunRPC]
-    public void MoveToNextPlayer()
-    {
-        activePokerPlayerIndex = (activePokerPlayerIndex + 1) % pokerPlayers.Length;
-    }
 
-    [PunRPC]
-    public void NewPot(int money)
-    {
-        PokerPlayer.SetPot(money);
-    }
-
-    [PunRPC]
-    public void PlayerActionMessage(String message)
-    {
-        if (view.Owner.ActorNumber == 1)
-        {
-            player1Action.text = message;
-        }
-        else if (view.Owner.ActorNumber == 2)
-        {
-            player2Action.text = message;
-        }
-        else if (view.Owner.ActorNumber == 3)
-        {
-            player3Action.text = message;
-        }
-        else if (view.Owner.ActorNumber == 4)
-        {
-            player4Action.text = message;
-        }
-    }
 
     // Generates a unique card
     private Card GenerateUniqueCard()
@@ -573,6 +542,39 @@ public class GameMaster : MonoBehaviour
             nextPokerPlayer = true;
         }
 
+    }
+
+    [PunRPC]
+    public void MoveToNextPlayer()
+    {
+        activePokerPlayerIndex = (activePokerPlayerIndex + 1) % pokerPlayers.Length;
+    }
+
+    [PunRPC]
+    public void NewPot(int money)
+    {
+        PokerPlayer.SetPot(money);
+    }
+
+    [PunRPC]
+    public void PlayerActionMessage(String message)
+    {
+        if (view.Owner.ActorNumber == 1)
+        {
+            player1Action.text = message;
+        }
+        else if (view.Owner.ActorNumber == 2)
+        {
+            player2Action.text = message;
+        }
+        else if (view.Owner.ActorNumber == 3)
+        {
+            player3Action.text = message;
+        }
+        else if (view.Owner.ActorNumber == 4)
+        {
+            player4Action.text = message;
+        }
     }
     private List<List<(int,int)>> GenerateAllHands(Pocket pocket, Board board)
     {
