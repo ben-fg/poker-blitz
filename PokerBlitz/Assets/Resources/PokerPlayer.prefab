@@ -362,7 +362,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1974231660244436134}
+      - m_Target: {fileID: 5292381839552693617}
         m_TargetAssemblyTypeName: GameMaster, Assembly-CSharp
         m_MethodName: HandleCheck
         m_Mode: 1
@@ -837,7 +837,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c76cafa7fe5e5d64c95628f780dece92, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  myButton: {fileID: 0}
   raiseNumber: {fileID: 1974231660109917043}
   raiseButton: {fileID: 1974231660849818713}
   checkButton: {fileID: 1974231659847304845}
@@ -2006,7 +2005,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1974231660244436134}
+      - m_Target: {fileID: 5292381839552693617}
         m_TargetAssemblyTypeName: GameMaster, Assembly-CSharp
         m_MethodName: HandleRaise
         m_Mode: 1
@@ -2216,7 +2215,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1974231660244436134}
+      - m_Target: {fileID: 5292381839552693617}
         m_TargetAssemblyTypeName: GameMaster, Assembly-CSharp
         m_MethodName: HandleFold
         m_Mode: 1
@@ -2974,7 +2973,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c76cafa7fe5e5d64c95628f780dece92, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  myButton: {fileID: 1974231659847304845}
   raiseNumber: {fileID: 1974231660109917043}
   raiseButton: {fileID: 1974231660849818713}
   checkButton: {fileID: 1974231659847304845}
