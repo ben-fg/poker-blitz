@@ -6,24 +6,13 @@ using Photon.Realtime;
 
 public class NetworkCursor : MonoBehaviourPun
 {
-    public GameObject cursorPrefab;
     private GameObject cursorInstance;
-    [SerializeField] private Texture2D customCursor;
 
     void Start()
     {
-        Vector2 hotspot;
-        hotspot = new Vector2(customCursor.width / 2, customCursor.height / 2);
-        Cursor.SetCursor(customCursor, hotspot, CursorMode.Auto);
-
-        //Only instantiate the cursor if it's not the local player
-        if (!photonView.IsMine)
-        {
-            cursorInstance = Instantiate(cursorPrefab);
-        }
+        cursorInstance = gameObject;
     }
 
-    /*
     void Update()
     {
         if (photonView.IsMine)
@@ -41,10 +30,13 @@ public class NetworkCursor : MonoBehaviourPun
     //Update the local player's cursor
     void UpdateLocalCursor()
     {
-        Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        mousePosition.z = 0; // Ensure it's in 2D space
+        Vector3 myMousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        myMousePosition.z = 10; // Ensure it's in 2D space
 
-        transform.position = mousePosition;
+        if (cursorInstance != null)
+        {
+            transform.position = myMousePosition;
+        }
     }
 
     //Sync the cursor position over the network
@@ -61,5 +53,4 @@ public class NetworkCursor : MonoBehaviourPun
             transform.position = (Vector3)stream.ReceiveNext();
         }
     }
-    */
 }

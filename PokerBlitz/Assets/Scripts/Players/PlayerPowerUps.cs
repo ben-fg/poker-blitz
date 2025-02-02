@@ -225,6 +225,30 @@ public class PlayerPowerUps : MonoBehaviour
                 }
             }
         }
+        else if (GameMaster.gameNumber == 4)
+        {
+            if (selectionEnd)
+            {
+                //Selects the appropriate powerup
+                powerUpNum = (int)PhotonNetwork.LocalPlayer.CustomProperties["PowerUp"];
+                if (view.IsMine)
+                {
+                    if (powerUpNum == 1)
+                    {
+
+                    }
+                    else if (powerUpNum == 2)
+                    {
+                        GetComponentInChildren<Camera>().orthographicSize = 7;
+                    }
+                    else if (powerUpNum == 3)
+                    {
+
+                    }
+                }
+                selectionEnd = false;
+            }
+        }
     }
 
     [PunRPC]

@@ -6,8 +6,8 @@ using Photon.Realtime;
 
 public class SpawnCoins : MonoBehaviour
 {
-    private float delay = 0.3f;
-    private float duration = 54;
+    private float delay = 5.5f;
+    private float duration = 58;
     [SerializeField] private GameObject coin;
     PhotonView view;
     // Start is called before the first frame update
@@ -42,6 +42,6 @@ public class SpawnCoins : MonoBehaviour
     public void DropCoin(float xPos)
     {
         GameObject currentCoin = PhotonNetwork.Instantiate(coin.name, new Vector3(xPos, 8.5f, 10), Quaternion.identity);
-        currentCoin.GetComponent<Coin>().coinPoints = 1;
+        //currentCoin.GetComponent<Coin>().coinPoints = 1;
     }
 }

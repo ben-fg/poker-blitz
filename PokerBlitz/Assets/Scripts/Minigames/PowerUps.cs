@@ -15,7 +15,7 @@ public class PowerUps : MonoBehaviour
     [SerializeField] TextMeshProUGUI playerNameText;
     [SerializeField] TextMeshProUGUI timerText;
     [SerializeField] Image currentPowerUpIcon;
-    private float timer = 5;
+    private float timer = 1;
     private int currentTurn = 1;
     private bool yourTurn;
     PhotonView view;
@@ -120,7 +120,7 @@ public class PowerUps : MonoBehaviour
         }
         else
         {
-            timer = 5;
+            timer = 1;
             currentTurn++;
             Debug.Log(currentTurn);
         }

@@ -49,7 +49,7 @@ public class GameMaster : MonoBehaviour
     PhotonView view;
 
     public static int gameNumber;
-    public const int maxGames = 2;
+    public const int maxGames = 4;
     /*
     For card denominations:
     (I'm sorry in advance but there's no way around this)

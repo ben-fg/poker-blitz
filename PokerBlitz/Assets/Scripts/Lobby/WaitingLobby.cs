@@ -44,7 +44,7 @@ public class WaitingLobby : MonoBehaviour
 
     public void ForceStart()
     {
-        PhotonNetwork.LoadLevel("Game4");
+        PhotonNetwork.LoadLevel("PreGame");
     }
 
     public void PokerForceStart()

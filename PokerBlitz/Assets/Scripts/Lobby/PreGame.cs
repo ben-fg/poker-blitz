@@ -15,6 +15,7 @@ public class PreGame : MonoBehaviour
 
     void Start()
     {
+        GameMaster.gameNumber = 4;
         view = GetComponent<PhotonView>();
         if (GameMaster.gameNumber == 1)
         {
@@ -37,8 +38,20 @@ public class PreGame : MonoBehaviour
             preGameText[4].text = "Tank";
             preGameText[5].text = "Gain extra health with high damage shots but at reduced fire rate.";
             preGameText[6].text = "Sniper";
-            preGameText[7].text = "Your shots travel very fast but you have less health.";
+            preGameText[7].text = "Your shots travel very fast and you can see further, but you have less health.";
             preGameText[8].text = "Cannons";
+        }
+        if (GameMaster.gameNumber == 4)
+        {
+            preGameText[0].text = "Coins will fall down the screen, click them to grab. Player with the most coins when the time is up wins.";
+            preGameText[1].text = "Mouse - Aim\nLeft click - Grab";
+            preGameText[2].text = "Streaker";
+            preGameText[3].text = "Grabbing 5 coins in a row rewards a bonus. Missing resets the streak.";
+            preGameText[4].text = "Oversight";
+            preGameText[5].text = "You have a wider POV.";
+            preGameText[6].text = "Tax Collector";
+            preGameText[7].text = "Any coins that fall off screen will be added to your total.";
+            preGameText[8].text = "Cash Grabbers";
         }
         preGameImages[3].sprite = gameplaySprite;
         for (int i = 0; i < preGameImages.Length - 1; i++)
