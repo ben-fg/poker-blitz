@@ -51,4 +51,9 @@ public class WaitingLobby : MonoBehaviour
     {
         PhotonNetwork.LoadLevel("PokerRoom");
     }
+
+    public void HighNoonForceStart()
+    {
+        PhotonNetwork.LoadLevel("Game3");
+    }
 }

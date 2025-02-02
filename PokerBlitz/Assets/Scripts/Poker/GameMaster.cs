@@ -96,16 +96,11 @@ public class GameMaster : MonoBehaviour
         {
             cardSpriteDictionary.Add(sprite.name, sprite);
         }
-        foreach (var kvp in cardSpriteDictionary)
-        {
-            Debug.Log($"Key: {kvp.Key}, Value: {kvp.Value.name}"); // Assuming Value is a Sprite
-        }
-
+   
         for (int i = 0; i < pokerPlayers.Length; i++)
         {
-            pokerPlayers[i] = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)i, i+1);
+            pokerPlayers[i] = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((i + shift) % 4), i + 1);
         }
-
   
     }
 
@@ -145,16 +140,18 @@ public class GameMaster : MonoBehaviour
                     int card2Denom = (int) card2.GetDenomination();
                     int card2Suit = (int) card2.GetSuit();
 
+                    Debug.LogError("I am the master");
+
                     // Sync the card and position to all clients via an RPC
                     view.RPC("SyncPlayerData", RpcTarget.All, shift, i, card1Denom, card1Suit, card2Denom, card2Suit);
                 }
             }
-
+            
             // Shows on screen the Pocket cards for every PokerPlayer
-            Debug.Log(pokerPlayers[0].GetPocket().ToString());
-            Debug.Log(pokerPlayers[1].GetPocket().ToString());
-            Debug.Log(pokerPlayers[2].GetPocket().ToString());
-            Debug.Log(pokerPlayers[3].GetPocket().ToString());
+            Debug.LogError(pokerPlayers[0].GetPocket().ToString());
+            Debug.LogError(pokerPlayers[1].GetPocket().ToString());
+            Debug.LogError(pokerPlayers[2].GetPocket().ToString());
+            Debug.LogError(pokerPlayers[3].GetPocket().ToString());
 
                 // Generates cards for the board
                 for (int i = 0; i < 5; i++)
@@ -342,12 +339,14 @@ public class GameMaster : MonoBehaviour
         pokerPlayers[playerIndex].SetPosition((PokerPlayer.Position)((playerIndex + shift) % 4));
 
         // Update the UI only on the local player's client
-        if (view.IsMine && playerIndex == PhotonNetwork.LocalPlayer.ActorNumber - 1)
-        {
+        if (view.IsMine && playerIndex == PhotonNetwork.LocalPlayer.ActorNumber - 1) {
+           
             SetCardSprite((Card.Denomination)card1denom, (Card.Suit)card1suit);
             SetCardSprite((Card.Denomination)card2denom, (Card.Suit)card2suit);
             Debug.LogError("I drew my card");
         }
+            
+        
     }
 
 
@@ -414,7 +413,7 @@ public class GameMaster : MonoBehaviour
 
             if (PokerPlayer.GetNumRaises() > 1)
             {
-                PlayerActionMessage($"PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()} more. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+                view.RPC("PlayerActionMessage", RpcTarget.All, $"PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()} more. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
                 Debug.Log($"PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()} more. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
             }
             else
