@@ -9,6 +9,7 @@ using UnityEngine.UI;
 using Unity.VisualScripting;
 using Photon.Pun;
 using Photon.Realtime;
+using ExitGames.Client.Photon;
 
 
 public class GameMaster : MonoBehaviour
@@ -41,6 +42,7 @@ public class GameMaster : MonoBehaviour
     private int shift = 0;
     private int activeplayers = 4;
     private PokerPlayer currentPokerPlayer;
+    private float delay = 3;
 
     [SerializeField] private Image[] cardImgs = new Image[5 + (2 * 4)];
     [SerializeField] private Sprite[] cardSprites = new Sprite[52];
@@ -76,6 +78,15 @@ public class GameMaster : MonoBehaviour
     E.g. King of hearts == [11,3]
     */
 
+    void Awake()
+    {
+        cardSpriteDictionary = new Dictionary<string, Sprite>();
+        foreach (Sprite sprite in cardSprites)
+        {
+            cardSpriteDictionary.Add(sprite.name, sprite);
+        }
+    }
+
     //Start is called before the first frame update
     void Start()
     {
@@ -85,266 +96,346 @@ public class GameMaster : MonoBehaviour
         {
             PowerUps.HideUIForRemotePlayers(gameObject);
         }
+        else
+        {
+            view.RPC("SetDeviceName", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer.ActorNumber);
+        }
 
         raiseNumber.gameObject.SetActive(false);
         for (int i = 8; i < cardImgs.Length; i++)
         {
             cardImgs[i].gameObject.SetActive(false);
         }
-        cardSpriteDictionary = new Dictionary<string, Sprite>();
-        foreach (Sprite sprite in cardSprites)
+        
+        if (PhotonNetwork.IsMasterClient)
         {
-            cardSpriteDictionary.Add(sprite.name, sprite);
+            InitializePokerPlayers();
         }
-   
-        for (int i = 0; i < pokerPlayers.Length; i++)
-        {
-            pokerPlayers[i] = new(new(GenerateUniqueCard(), GenerateUniqueCard()), (PokerPlayer.Position)((i + shift) % 4), i + 1);
-        }
-  
     }
 
-   
+    [PunRPC]
+    public void SetDeviceName(int actorNumber)
+    {
+        name = "PokerDevice" + actorNumber;
+    }
+
+    public void InitializePokerPlayers()
+    {
+        for (int i = 0; i < pokerPlayers.Length; i++)
+        {
+            Card card1 = GenerateUniqueCard();
+            Card card2 = GenerateUniqueCard();
+
+            int card1Denom = (int)card1.GetDenomination();
+            int card1Suit = (int)card1.GetSuit();
+            int card2Denom = (int)card2.GetDenomination();
+            int card2Suit = (int)card2.GetSuit();
+
+            view.RPC("SyncPokerPlayers", RpcTarget.AllBuffered, shift, i, card1Denom, card1Suit, card2Denom, card2Suit);
+
+            
+        }
+    }
+
+    [PunRPC]
+    public void SyncPokerPlayers(int shift, int playerIndex, int card1denom, int card1suit, int card2denom, int card2suit)
+    {
+
+        Card card1 = new((Card.Denomination)card1denom, (Card.Suit)card1suit);
+        Card card2 = new((Card.Denomination)card2denom, (Card.Suit)card2suit);
+        // Set the player's pocket and position
+       
+        pokerPlayers[playerIndex] = new(new(card1, card2), (PokerPlayer.Position)((playerIndex + shift) % 4), playerIndex + 1);
+
+        for (int i = 0; i < pokerPlayers.Length; i++)
+        {
+            if (pokerPlayers[i] != null)
+            {
+                Debug.Log($"Client {PhotonNetwork.LocalPlayer.ActorNumber} - Player {i}: " +
+                          $"Position: {pokerPlayers[i].GetPosition()}");
+            }
+            else
+            {
+                Debug.Log($"Client {PhotonNetwork.LocalPlayer.ActorNumber} - Player {i} is not initialized.");
+            }
+        }
+    }
+    
 
 
         //Update is called once per frame
         void Update()
         {
-        
-            // Checks whether preflop is true to start a new round
-            if (isPreFlop)
+
+        if (delay >= 0)
+        {
+            delay -= Time.deltaTime;
+        }
+        else
+        {
+            if (view.IsMine)
             {
-                // Makes all the cards available 
-                deck = new bool[13, 4];
-
-              
-
-                activeplayers = 4;
-
-                // New cards and positions
-                // The positionEnum is used so that you could alternate the positions every round 
-
-                shift = (4 - positionEnum) % 4;
-
-            
-            if (PhotonNetwork.IsMasterClient)
-            {
-
-                for (int i = 0; i < pokerPlayers.Length; i++)
+                // Checks whether preflop is true to start a new round
+                if (isPreFlop)
                 {
-                    Card card1 = GenerateUniqueCard();
-                    Card card2 = GenerateUniqueCard();
-
-                    int card1Denom = (int)card1.GetDenomination();
-                    int card1Suit = (int) card1.GetSuit();
-                    int card2Denom = (int) card2.GetDenomination();
-                    int card2Suit = (int) card2.GetSuit();
-
-                    Debug.LogError("I am the master");
-
-                    // Sync the card and position to all clients via an RPC
-                    view.RPC("SyncPlayerData", RpcTarget.All, shift, i, card1Denom, card1Suit, card2Denom, card2Suit);
-                }
-            }
-            
-            // Shows on screen the Pocket cards for every PokerPlayer
-            Debug.LogError(pokerPlayers[0].GetPocket().ToString());
-            Debug.LogError(pokerPlayers[1].GetPocket().ToString());
-            Debug.LogError(pokerPlayers[2].GetPocket().ToString());
-            Debug.LogError(pokerPlayers[3].GetPocket().ToString());
-
-                // Generates cards for the board
-                for (int i = 0; i < 5; i++)
-                {
-                    boardCards[i] = GenerateUniqueCard();
-                }
-
-                board = new(boardCards);
-
-                // Add all players to an active players list 
-                // Play the blinds
-
-                // To change the starting PokerPlayer each round based on who is the SB
-                activePokerPlayerIndex = (0 + positionEnum) % 4;
-                sbIndex = activePokerPlayerIndex;
-                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-
-                // Manually processes the small blind
-                currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25);
-                PokerPlayer.SetPot(PokerPlayer.GetPot() + 25);
-
-                // Move to big blind
-                /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-                view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-
-                // Big Blind buts in his big blind
-                currentPokerPlayer.Raise(BigBlind);
-
-                // Move to next PokerPlayer
-                /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-                view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                Debug.Log(" blinds played");
-                PokerPlayer.DecreaseCallCounter();
-
-                isPreFlop = false;
-                isFlop = true;
-                nextPokerPlayer = true;
-                excuteSB = true;
-                positionEnum++;
-            }
+                    // Makes all the cards available 
+                    deck = new bool[13, 4];
 
 
 
-            if (board.GetCurrentStreet().Equals(Board.Street.Flop))
-            {
+                    activeplayers = 4;
 
-                // It checks if it is true so it would only show the flop once
-                if (isFlop)
-                {
-                    Debug.Log("I am flopping");
+                    // New cards and positions
+                    // The positionEnum is used so that you could alternate the positions every round 
 
-                    // Shows the flop cards
-                    Debug.Log(board.ToString());
+                    shift = (4 - positionEnum) % 4;
 
-                    for (int i = 8; i < 11; i++)
+
+                    if (PhotonNetwork.IsMasterClient)
                     {
-                        cardImgs[i].gameObject.SetActive(true);
+
+                        for (int i = 0; i < pokerPlayers.Length; i++)
+                        {
+                            Card card1 = GenerateUniqueCard();
+                            Card card2 = GenerateUniqueCard();
+
+                            int card1Denom = (int)card1.GetDenomination();
+                            int card1Suit = (int)card1.GetSuit();
+                            int card2Denom = (int)card2.GetDenomination();
+                            int card2Suit = (int)card2.GetSuit();
+
+                            Debug.LogError("I am the master");
+
+                            Debug.LogError($"before syncing: {card1Denom}, {card1Suit}, {card2Denom}, {card2Suit}");
+                            // Sync the card and position to all clients via an RPC
+                            view.RPC("SyncPlayerData", RpcTarget.AllBuffered, shift, i, card1Denom, card1Suit, card2Denom, card2Suit);
+                        }
                     }
 
-                    // To start the flop with the SB
-                    activePokerPlayerIndex = sbIndex;
+
+
+                    // Generates cards for the board
+                    for (int i = 0; i < 5; i++)
+                    {
+                        boardCards[i] = GenerateUniqueCard();
+                    }
+
+                    board = new(boardCards);
+
+                    // Add all players to an active players list 
+                    // Play the blinds
+
+                    // To change the starting PokerPlayer each round based on who is the SB
+                    activePokerPlayerIndex = (0 + positionEnum) % 4;
+                    sbIndex = activePokerPlayerIndex;
+                    if (pokerPlayers[activePokerPlayerIndex] != null)
+                    {
+                        currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
+                    }
+                    else
+                    {
+                        Debug.LogError("PokerPlayer at activePokerPlayerIndex is null");
+                    }
+
+
+                    // Manually processes the small blind
+                    currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25);
+                    PokerPlayer.SetPot(PokerPlayer.GetPot() + 25);
+
+                    // Move to big blind
+                    /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
+                    view.RPC("MoveToNextPlayer", RpcTarget.All);
                     currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
 
-                    /* Now isTurn is true but cannot access the turn cards unless the street is incremented
-                       If raised, it will not be ablt to show the turn cards 
-                     */
-                    isFlop = false;
-                    isTurn = true;
-                }
-            }
-            else if (board.GetCurrentStreet().Equals(Board.Street.Turn))
-            {
-                // It checks if it is true so it would only show the turn once
-                if (isTurn)
-                {
-                    Debug.Log("I am turning");
-                    Debug.Log(board.ToString());
-                    cardImgs[11].gameObject.SetActive(true);
-                    activePokerPlayerIndex = sbIndex;
+                    // Big Blind buts in his big blind
+                    currentPokerPlayer.Raise(BigBlind);
+
+                    // Move to next PokerPlayer
+                    /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
+                    view.RPC("MoveToNextPlayer", RpcTarget.All);
                     currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                    isTurn = false;
-                    isRiver = true;
-                }
-            }
-            else if (board.GetCurrentStreet().Equals(Board.Street.River))
-            {
-                // It checks if it is true so it would only show the river once
-                if (isRiver)
-                {
-                    Debug.Log("I am rivering");
-                    Debug.Log(board.ToString());
-                    cardImgs[12].gameObject.SetActive(true);
-                    activePokerPlayerIndex = sbIndex;
-                    currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                    isRiver = false;
-                }
-            }
+                    Debug.Log(" blinds played");
+                    PokerPlayer.DecreaseCallCounter();
 
-            // Checks if the PokerPlayer is not folded
-            if (!currentPokerPlayer.IsFolded())
-            {
-
-                // Prints on screen the PokerPlayer that is in turn to play once 
-                if (nextPokerPlayer)
-                {
-                    Debug.Log($"Current PokerPlayer is now PokerPlayer {currentPokerPlayer.GetNum()}");
-                    nextPokerPlayer = false;
+                    isPreFlop = false;
+                    isFlop = true;
+                    nextPokerPlayer = true;
+                    excuteSB = true;
+                    positionEnum++;
                 }
 
-                if (PokerPlayer.IsGlobalRaised())
+
+
+                if (board.GetCurrentStreet().Equals(Board.Street.Flop))
                 {
-                    raiseNumber.gameObject.SetActive(true);
+
+                    // It checks if it is true so it would only show the flop once
+                    if (isFlop)
+                    {
+                        Debug.Log("I am flopping");
+
+                        // Shows the flop cards
+                        Debug.Log(board.ToString());
+
+                        for (int i = 8; i < 11; i++)
+                        {
+                            cardImgs[i].gameObject.SetActive(true);
+                        }
+
+                        // To start the flop with the SB
+                        activePokerPlayerIndex = sbIndex;
+                        currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
+
+                        /* Now isTurn is true but cannot access the turn cards unless the street is incremented
+                           If raised, it will not be ablt to show the turn cards 
+                         */
+                        isFlop = false;
+                        isTurn = true;
+                    }
                 }
+                else if (board.GetCurrentStreet().Equals(Board.Street.Turn))
+                {
+                    // It checks if it is true so it would only show the turn once
+                    if (isTurn)
+                    {
+                        Debug.Log("I am turning");
+                        Debug.Log(board.ToString());
+                        cardImgs[11].gameObject.SetActive(true);
+                        activePokerPlayerIndex = sbIndex;
+                        currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
+                        isTurn = false;
+                        isRiver = true;
+                    }
+                }
+                else if (board.GetCurrentStreet().Equals(Board.Street.River))
+                {
+                    // It checks if it is true so it would only show the river once
+                    if (isRiver)
+                    {
+                        Debug.Log("I am rivering");
+                        Debug.Log(board.ToString());
+                        cardImgs[12].gameObject.SetActive(true);
+                        activePokerPlayerIndex = sbIndex;
+                        currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
+                        isRiver = false;
+                    }
+                }
+
+                // Checks if the PokerPlayer is not folded
+                if (!currentPokerPlayer.IsFolded())
+                {
+
+                    // Prints on screen the PokerPlayer that is in turn to play once 
+                    if (nextPokerPlayer)
+                    {
+                        Debug.Log($"Current PokerPlayer is now PokerPlayer {currentPokerPlayer.GetNum()}");
+                        nextPokerPlayer = false;
+                    }
+
+                    if (PokerPlayer.IsGlobalRaised())
+                    {
+                        raiseNumber.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        raiseNumber.gameObject.SetActive(false);
+                    }
+
+                }
+
+                // If PokerPlayer is folded, then move to next PokerPlayer
                 else
                 {
-                    raiseNumber.gameObject.SetActive(false);
+                    /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
+                    view.RPC("MoveToNextPlayer", RpcTarget.All);
+                    currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
+                    nextPokerPlayer = true;
+
                 }
 
-            }
-
-            // If PokerPlayer is folded, then move to next PokerPlayer
-            else
-            {
-            /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-                view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                nextPokerPlayer = true;
-
-            }
-
-            // If the 3 people called or 4 people checked, then isGlobalRaised flag and the counter are reset to false and 0
-            if (PokerPlayer.GetCallCounter() == (activeplayers - 1) || PokerPlayer.GetCheckCounter() == activeplayers)
-            {
-                PokerPlayer.ResetGlobals();
-
-                // Resets the isChecked flag to false, raise to 0, and amountCalled to 0
-                foreach (var pokerPlayer in pokerPlayers)
+                // If the 3 people called or 4 people checked, then isGlobalRaised flag and the counter are reset to false and 0
+                if (PokerPlayer.GetCallCounter() == (activeplayers - 1) || PokerPlayer.GetCheckCounter() == activeplayers)
                 {
-                    pokerPlayer.Reset();
-                }
+                    PokerPlayer.ResetGlobals();
 
-                // However if it is also on the showdown, that means the game has ended and a new hand is dealt
-                if (board.GetCurrentStreet().Equals(Board.Street.Showdown))
-                {
+                    // Resets the isChecked flag to false, raise to 0, and amountCalled to 0
                     foreach (var pokerPlayer in pokerPlayers)
                     {
+                        pokerPlayer.Reset();
+                    }
+
+                    // However if it is also on the showdown, that means the game has ended and a new hand is dealt
+                    if (board.GetCurrentStreet().Equals(Board.Street.Showdown))
+                    {
+                        foreach (var pokerPlayer in pokerPlayers)
+                        {
+                            pokerPlayer.Unfold();
+                        }
+                        isPreFlop = true;
+                    }
+                    else
+                    {
+
+                        // Move to next street if we are not in showdown
+                        board.IncrementStreet();
+                    }
+
+                }
+
+                if (PokerPlayer.GetFoldCounter() == (pokerPlayers.Length - 1))
+                {
+
+                    PokerPlayer.ResetGlobals();
+                    foreach (var pokerPlayer in pokerPlayers)
+                    {
+                        pokerPlayer.Reset();
                         pokerPlayer.Unfold();
                     }
+
                     isPreFlop = true;
                 }
-                else
-                {
-
-                    // Move to next street if we are not in showdown
-                    board.IncrementStreet();
-                }
 
             }
-
-            if (PokerPlayer.GetFoldCounter() == (pokerPlayers.Length - 1))
-            {
-
-                PokerPlayer.ResetGlobals();
-                foreach (var pokerPlayer in pokerPlayers)
-                {
-                    pokerPlayer.Reset();
-                    pokerPlayer.Unfold();
-                }
-
-                isPreFlop = true;
-            }
+        }
         
-        
-    }
+        }
 
     [PunRPC]
-    void SyncPlayerData(int shift, int playerIndex, int card1denom, int card1suit, int card2denom, int card2suit)
+    public void SyncPlayerData(int shift, int playerIndex, int card1denom, int card1suit, int card2denom, int card2suit)
     {
+        Debug.LogError($"while syncing: {card1denom}, {card1suit}, {card2denom}, {card2suit}");
         Card card1 = new ((Card.Denomination) card1denom, (Card.Suit) card1suit);
         Card card2 = new ((Card.Denomination)card2denom, (Card.Suit)card2suit);
         // Set the player's pocket and position
-        pokerPlayers[playerIndex].SetPocket(new(card1, card2));
-        pokerPlayers[playerIndex].SetPosition((PokerPlayer.Position)((playerIndex + shift) % 4));
+        if (pokerPlayers[playerIndex] != null)
+        {
+            pokerPlayers[playerIndex].SetPocket(new(card1, card2));
+            pokerPlayers[playerIndex].SetPosition((PokerPlayer.Position)((playerIndex + shift) % 4));
+        }
+        else
+        {
+            Debug.LogError($"This player {playerIndex} is not there");
+            pokerPlayers[playerIndex] = new (new(card1, card2), (PokerPlayer.Position)((playerIndex + shift) % 4), playerIndex + 1);
+        }
+
 
         // Update the UI only on the local player's client
-        if (view.IsMine && playerIndex == PhotonNetwork.LocalPlayer.ActorNumber - 1) {
-           
-            SetCardSprite((Card.Denomination)card1denom, (Card.Suit)card1suit);
-            SetCardSprite((Card.Denomination)card2denom, (Card.Suit)card2suit);
-            Debug.LogError("I drew my card");
+
+        for (int i = 0; i < pokerPlayers.Length; i++)
+        {
+
+            Debug.Log($"index: {i}");
+            Debug.Log($"Current Player device: {GameObject.Find("PokerDevice" + (i + 1))}");
+            GameMaster currentPlayerDevice = GameObject.Find("PokerDevice" + (i + 1)).GetComponent<GameMaster>();
+            Debug.Log($"Current: {currentPlayerDevice}");
+            currentPlayerDevice.SetCardSprite((Card.Denomination)card1denom, (Card.Suit)card1suit);
+            currentPlayerDevice.SetCardSprite((Card.Denomination)card2denom, (Card.Suit)card2suit);
         }
+            
+            // Shows on screen the Pocket cards for every PokerPlayer
+
+            Debug.LogError("I drew my card");
+        
             
         
     }
@@ -378,22 +469,47 @@ public class GameMaster : MonoBehaviour
         return uniqueCard;
     }
 
+
     public void SetCardSprite(Card.Denomination cardDenomination, Card.Suit cardSuit)
     {
+        Debug.LogError($"CardspriteElement: {cardSpriteElement} ");
+        Debug.LogError($"CardDenom: {cardDenomination} CardSuit: {cardSuit}");
         Sprite currentCard = GetCardSprite(cardDenomination, cardSuit);
-        if (cardSpriteElement >= 0)
+
+        if (currentCard != null) // Check if the sprite is retrieved successfully
         {
-            cardImgs[cardSpriteElement].sprite = currentCard;
+            if (cardSpriteElement >= 0)
+            {
+                cardImgs[cardSpriteElement].sprite = currentCard;
+            }
+            cardSpriteElement++;
+            Debug.LogError($"After Addition CardspriteElement: {cardSpriteElement} ");
+            if (cardSpriteElement == 13)
+            {
+                cardSpriteElement = 0;
+            }
         }
-        cardSpriteElement++;
-        if (cardSpriteElement == 13)
+        else
         {
-            cardSpriteElement = 0;
+            Debug.LogError("Current card sprite is null.");
         }
+            /*  Make it reset after each hand
+             */
     }
+
     public Sprite GetCardSprite(Card.Denomination denomination, Card.Suit suit)
     {
         string cardKey = $"{denomination}_of_{suit}";
+        Debug.LogError($"(Getcardsprite function) CardDenom: {denomination} CardSuit: {suit}");
+        if (cardSpriteDictionary.ContainsKey(cardKey))
+        {
+            Debug.LogError($"Cardsprite: {cardSpriteDictionary[cardKey]} ");
+        }
+        else
+        {
+            Debug.LogError($"Cardsprite: card key is not here ");
+        }
+        
         return cardSpriteDictionary.ContainsKey(cardKey) ? cardSpriteDictionary[cardKey] : null;
     }
 

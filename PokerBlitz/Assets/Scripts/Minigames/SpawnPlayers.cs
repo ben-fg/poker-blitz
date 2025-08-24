@@ -14,7 +14,7 @@ public class SpawnPlayers : MonoBehaviour
     {
         if (isMultiSpawnPos)
         {
-            PhotonNetwork.Instantiate(playerPrefab.name, multiSpawnPos[Random.Range(0, multiSpawnPos.Length)], Quaternion.identity);
+            PhotonNetwork.Instantiate(playerPrefab.name, multiSpawnPos[PhotonNetwork.LocalPlayer.ActorNumber - 1], Quaternion.identity);
         }
         else
         {
