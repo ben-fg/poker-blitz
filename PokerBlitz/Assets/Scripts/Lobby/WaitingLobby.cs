@@ -49,7 +49,7 @@ public class WaitingLobby : MonoBehaviour
 
     public void PokerForceStart()
     {
-        PhotonNetwork.LoadLevel("PokerRoom");
+        PhotonNetwork.LoadLevel("TestPokerScene");
     }
 
     public void HighNoonForceStart()

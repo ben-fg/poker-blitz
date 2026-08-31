@@ -23,6 +23,8 @@ public class PokerPlayer
     private static int pot = 0;
     private static int previousRaise = 0;
 
+    private int seatIndex; // Absolute seat index (0,1,2,... clockwise around the table)
+
     public enum Position
     {
         SB, // Small Blind
@@ -91,6 +93,22 @@ public class PokerPlayer
     {
         this.winTally = winTally;
     }
+
+    public int GetSeatIndex()
+    {
+        return seatIndex;
+    }
+
+    public void SetSeatIndex(int seatIndex)
+    {
+        this.seatIndex = seatIndex;
+    }
+
+    public int GetRelativeSeatIndex(int localSeat)
+    {
+        return (seatIndex - localSeat + 4) % 4;
+    }
+
 
     public void Fold()
     {

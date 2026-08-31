@@ -670,11 +670,11 @@ PlayerSettings:
     m_VersionName: 
   apiCompatibilityLevel: 6
   activeInputHandler: 0
-  cloudProjectId: 
+  cloudProjectId: cd44478f-eb88-4747-b188-e943e91b8131
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: 
-  organizationId: 
+  projectName: PokerBlitz
+  organizationId: unity_5a9da54c98064998ce99
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   playerDataPath: 
