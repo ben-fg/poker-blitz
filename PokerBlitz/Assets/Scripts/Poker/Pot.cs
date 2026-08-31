@@ -5,6 +5,6 @@ using UnityEngine;
 public class Pot
 {
     public int amount;
-    public List<TestPokerPlayer> eligiblePlayers = new List<TestPokerPlayer>();
+    public List<PokerPlayer> eligiblePlayers = new List<PokerPlayer>();
 }
 

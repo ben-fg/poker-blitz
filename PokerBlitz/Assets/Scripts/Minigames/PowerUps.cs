@@ -11,7 +11,7 @@ public class PowerUps : MonoBehaviour
 {
     Hashtable playerProperties = new Hashtable();
     [SerializeField] GameObject[] powerUpButtons = new GameObject[3];
-    [SerializeField] Sprite[] powerUpSprites = new Sprite[GameMaster.maxGames * 3];
+    [SerializeField] Sprite[] powerUpSprites = new Sprite[MinigameSelection.maxGames * 3];
     [SerializeField] TextMeshProUGUI playerNameText;
     [SerializeField] TextMeshProUGUI timerText;
     [SerializeField] Image currentPowerUpIcon;
@@ -35,7 +35,7 @@ public class PowerUps : MonoBehaviour
 
         for (int i = 0; i < 3; i++)
         {
-            powerUpButtons[i].GetComponent<Image>().sprite = GetSprite(GameMaster.gameNumber - 1, i);
+            powerUpButtons[i].GetComponent<Image>().sprite = GetSprite(MinigameSelection.gameNumber - 1, i);
         }
 
         Debug.Log("Setting clear 0");
@@ -66,7 +66,7 @@ public class PowerUps : MonoBehaviour
         if (!sceneIsLoaded && PhotonNetwork.IsMasterClient && currentTurn == 4)
         {
             //Load the level and set the global property to true
-            PhotonNetwork.LoadLevel("Game" + GameMaster.gameNumber);
+            PhotonNetwork.LoadLevel("Game" + MinigameSelection.gameNumber);
 
             Hashtable props = new Hashtable
             {
@@ -188,7 +188,7 @@ public class PowerUps : MonoBehaviour
             playerProperties["PowerUp"] = 1;
             PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
             currentPowerUpIcon.color = Color.white;
-            currentPowerUpIcon.sprite = GetSprite(GameMaster.gameNumber - 1, 0);
+            currentPowerUpIcon.sprite = GetSprite(MinigameSelection.gameNumber - 1, 0);
         }
     }
 
@@ -200,7 +200,7 @@ public class PowerUps : MonoBehaviour
             playerProperties["PowerUp"] = 2;
             PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
             currentPowerUpIcon.color = Color.white;
-            currentPowerUpIcon.sprite = GetSprite(GameMaster.gameNumber - 1, 1);
+            currentPowerUpIcon.sprite = GetSprite(MinigameSelection.gameNumber - 1, 1);
         }
     }
 
@@ -212,7 +212,7 @@ public class PowerUps : MonoBehaviour
             playerProperties["PowerUp"] = 3;
             PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
             currentPowerUpIcon.color = Color.white;
-            currentPowerUpIcon.sprite = GetSprite(GameMaster.gameNumber - 1, 2);
+            currentPowerUpIcon.sprite = GetSprite(MinigameSelection.gameNumber - 1, 2);
         }
     }
 }

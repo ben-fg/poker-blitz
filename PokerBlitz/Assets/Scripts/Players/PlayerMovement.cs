@@ -188,7 +188,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (GameMaster.gameNumber == 1)
+        if (MinigameSelection.gameNumber == 1)
         {
             if (collision.CompareTag("PU1"))
             {
@@ -212,7 +212,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnTriggerStay2D(Collider2D collision)
     {
-        if (GameMaster.gameNumber == 1)
+        if (MinigameSelection.gameNumber == 1)
         {
             if (collision.CompareTag("PU2"))
             {

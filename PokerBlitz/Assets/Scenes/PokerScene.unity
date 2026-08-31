@@ -7752,7 +7752,7 @@ MonoBehaviour:
   raiseSlider: {fileID: 1872151037}
   raiseAmountText: {fileID: 462839638}
   callAmountText: {fileID: 936749782}
-  showdownPanel: {fileID: 1074689616}
+  showdownPanel: {fileID: 0}
   resultText: {fileID: 1071059270}
   statusText: {fileID: 1074689618}
   showCardsButton: {fileID: 1173530509}

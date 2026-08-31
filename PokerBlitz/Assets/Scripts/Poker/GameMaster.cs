@@ -1,869 +1,1340 @@
-using System;
-using System.Collections;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Collections.Generic;
-//using System.Runtime.CompilerServices;
-//using UnityEditor.Experimental.GraphView;
-using UnityEngine;
-using UnityEngine.UI;
-using Unity.VisualScripting;
 using Photon.Pun;
-using Photon.Realtime;
-using ExitGames.Client.Photon;
+using UnityEngine;
 
-
-public class GameMaster : MonoBehaviour
+[RequireComponent(typeof(PhotonView))]
+public class GameMaster : MonoBehaviourPun
 {
-    private PokerPlayer[] pokerPlayers = new PokerPlayer[4];
-    private bool[,] deck = new bool[13, 4];
-    private Card[] boardCards = new Card[5];
-    private Board board;
+    // ────────────────────────────────────────────────────────────
+    //  Enums
+    // ────────────────────────────────────────────────────────────
 
- 
-    [SerializeField] private InputField raiseNumber;
-    [SerializeField] private Button raiseButton;
-    [SerializeField] private Button checkButton;
-    [SerializeField] private Button foldButton;
-    [SerializeField] private Text player1Action;
-    [SerializeField] private Text player2Action;
-    [SerializeField] private Text player3Action;
-    [SerializeField] private Text player4Action;
-    private int activePokerPlayerIndex;
-    private int sbIndex;
-    private bool isPreFlop = true;
-    private bool isFlop = false;
-    private bool isTurn = false;
-    private bool isRiver = false;
-    private bool nextPokerPlayer = false;
-    private bool excuteSB = true;
-    private const int SmallBlind = 25;
-    private const int BigBlind = 50;
-    private int positionEnum = 0;
-    private int shift = 0;
-    private int activeplayers = 4;
-    private PokerPlayer currentPokerPlayer;
-    private float delay = 3;
+    private enum Street { Preflop, Flop, Turn, River, Showdown }
 
-    [SerializeField] private Image[] cardImgs = new Image[5 + (2 * 4)];
-    [SerializeField] private Sprite[] cardSprites = new Sprite[52];
-    private Dictionary<string, Sprite> cardSpriteDictionary;
-    private int cardSpriteElement = 0;
-    PhotonView view;
-
-    public static int gameNumber;
-    public const int maxGames = 4;
-    /*
-    For card denominations:
-    (I'm sorry in advance but there's no way around this)
-    0 = 2
-    1 = 3
-    2 = 4
-    3 = 5
-    4 = 6
-    5 = 7
-    6 = 8
-    7 = 9
-    8 = 10
-    9 = Jack
-    10 = Queen
-    11 = King
-    12 = Ace
-
-    For card suits:
-    0 = Spades
-    1 = Diamonds
-    2 = Clubs
-    3 = Hearts
-
-    E.g. King of hearts == [11,3]
-    */
-
-    void Awake()
+    private enum Ranking
     {
-        cardSpriteDictionary = new Dictionary<string, Sprite>();
-        foreach (Sprite sprite in cardSprites)
-        {
-            cardSpriteDictionary.Add(sprite.name, sprite);
-        }
+        HighCard, Pair, TwoPair, ThreeOfAKind,
+        Straight, Flush, FullHouse, FourOfAKind,
+        StraightFlush, RoyalFlush
     }
 
-    //Start is called before the first frame update
+    private static readonly string[] RankingNames =
+    {
+        "High Card", "Pair", "Two Pair", "Three of a Kind",
+        "Straight", "Flush", "Full House", "Four of a Kind",
+        "Straight Flush", "Royal Flush"
+    };
+
+    private struct HandResult
+    {
+        public int[] Score;
+        public List<Card> BestFive;
+    }
+
+    // Records when and with how much a player busted, for tournament ranking.
+    private class EliminationRecord
+    {
+        public PokerPlayer Player;
+        public int HandEliminated;
+        public int StackBeforeThatHand;
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Constants
+    // ────────────────────────────────────────────────────────────
+
+    private const int SMALL_BLIND = 5;
+    private const int BIG_BLIND = 10;
+    private const int STARTING_BALANCE = 1000;
+    private const int MAX_HANDS = 10;
+
+    // ────────────────────────────────────────────────────────────
+    //  Game State
+    // ────────────────────────────────────────────────────────────
+
+    private List<PokerPlayer> pokerPlayers = new List<PokerPlayer>();
+
+    private bool[,] deck;        // [denomination 0-12, suit 0-3]
+    private Card[] boardCards;  // up to 5 community cards
+
+    private Street currentStreet;
+
+    private int dealerId = -1;
+    private int sbId;
+    private int bbId;
+    private int playerId;        // whose turn it is
+
+    public List<Pot> pots = new List<Pot>();
+
+    private int currentBetToCall; // highest total contribution required this street
+    private int lastRaiseSize;    // used to enforce min-raise
+
+    private int handsPlayed;
+    private readonly List<EliminationRecord> eliminationLog = new List<EliminationRecord>();
+    private readonly Dictionary<PokerPlayer, int> stackAtHandStart = new Dictionary<PokerPlayer, int>();
+
+    [Header("UI")]
+    public PokerUIManager uiManager;
+
+    private PokerPlayer CurrentPlayer => pokerPlayers[playerId];
+    public PokerPlayer GetCurrentPlayer() => CurrentPlayer;
+    public PokerPlayer GetPlayer(int index) => pokerPlayers[index];
+    public int GetPlayerCount() => pokerPlayers.Count;
+    public int GetLastRaiseSize() => lastRaiseSize;
+
+    // ────────────────────────────────────────────────────────────
+    //  Unity Entry Point
+    // ────────────────────────────────────────────────────────────
+
     void Start()
     {
-        view = GetComponent<PhotonView>();
-
-        if (!view.IsMine)
+        if (PhotonNetwork.InRoom && PhotonNetwork.PlayerList.Length > 0)
         {
-            PowerUps.HideUIForRemotePlayers(gameObject);
+            // Sort by actor number so every client builds the same seat order.
+            var orderedPlayers = PhotonNetwork.PlayerList.OrderBy(p => p.ActorNumber);
+
+            foreach (var photonPlayer in orderedPlayers)
+            {
+                string displayName = string.IsNullOrEmpty(photonPlayer.NickName)
+                    ? $"Player {photonPlayer.ActorNumber}"
+                    : photonPlayer.NickName;
+
+                var p = new PokerPlayer(displayName);
+                p.ActorNumber = photonPlayer.ActorNumber;
+                p.SetBalance(STARTING_BALANCE);
+                pokerPlayers.Add(p);
+            }
+
+            // Only the master deals; everyone else waits for its broadcasts.
+            if (PhotonNetwork.IsMasterClient)
+                StartNewHand();
         }
         else
         {
-            view.RPC("SetDeviceName", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer.ActorNumber);
-        }
-
-        raiseNumber.gameObject.SetActive(false);
-        for (int i = 8; i < cardImgs.Length; i++)
-        {
-            cardImgs[i].gameObject.SetActive(false);
-        }
-        
-        if (PhotonNetwork.IsMasterClient)
-        {
-            InitializePokerPlayers();
-        }
-    }
-
-    [PunRPC]
-    public void SetDeviceName(int actorNumber)
-    {
-        name = "PokerDevice" + actorNumber;
-    }
-
-    public void InitializePokerPlayers()
-    {
-        for (int i = 0; i < pokerPlayers.Length; i++)
-        {
-            Card card1 = GenerateUniqueCard();
-            Card card2 = GenerateUniqueCard();
-
-            int card1Denom = (int)card1.GetDenomination();
-            int card1Suit = (int)card1.GetSuit();
-            int card2Denom = (int)card2.GetDenomination();
-            int card2Suit = (int)card2.GetSuit();
-
-            view.RPC("SyncPokerPlayers", RpcTarget.AllBuffered, shift, i, card1Denom, card1Suit, card2Denom, card2Suit);
-
-            
-        }
-    }
-
-    [PunRPC]
-    public void SyncPokerPlayers(int shift, int playerIndex, int card1denom, int card1suit, int card2denom, int card2suit)
-    {
-
-        Card card1 = new((Card.Denomination)card1denom, (Card.Suit)card1suit);
-        Card card2 = new((Card.Denomination)card2denom, (Card.Suit)card2suit);
-        // Set the player's pocket and position
-       
-        pokerPlayers[playerIndex] = new(new(card1, card2), (PokerPlayer.Position)((playerIndex + shift) % 4), playerIndex + 1);
-
-        for (int i = 0; i < pokerPlayers.Length; i++)
-        {
-            if (pokerPlayers[i] != null)
+            // Offline (e.g. Play in Editor with no room), fall back to local AI names.
+            string[] names = { "Moaz", "Tom", "Issa", "Charan" };
+            foreach (string n in names)
             {
-                Debug.Log($"Client {PhotonNetwork.LocalPlayer.ActorNumber} - Player {i}: " +
-                          $"Position: {pokerPlayers[i].GetPosition()}");
+                var p = new PokerPlayer(n);
+                p.SetBalance(STARTING_BALANCE);
+                pokerPlayers.Add(p);
             }
-            else
-            {
-                Debug.Log($"Client {PhotonNetwork.LocalPlayer.ActorNumber} - Player {i} is not initialized.");
-            }
+
+            StartNewHand();
         }
     }
-    
 
-
-        //Update is called once per frame
-        void Update()
-        {
-
-        if (delay >= 0)
-        {
-            delay -= Time.deltaTime;
-        }
-        else
-        {
-            if (view.IsMine)
-            {
-                // Checks whether preflop is true to start a new round
-                if (isPreFlop)
-                {
-                    // Makes all the cards available 
-                    deck = new bool[13, 4];
-
-
-
-                    activeplayers = 4;
-
-                    // New cards and positions
-                    // The positionEnum is used so that you could alternate the positions every round 
-
-                    shift = (4 - positionEnum) % 4;
-
-
-                    if (PhotonNetwork.IsMasterClient)
-                    {
-
-                        for (int i = 0; i < pokerPlayers.Length; i++)
-                        {
-                            Card card1 = GenerateUniqueCard();
-                            Card card2 = GenerateUniqueCard();
-
-                            int card1Denom = (int)card1.GetDenomination();
-                            int card1Suit = (int)card1.GetSuit();
-                            int card2Denom = (int)card2.GetDenomination();
-                            int card2Suit = (int)card2.GetSuit();
-
-                            Debug.LogError("I am the master");
-
-                            Debug.LogError($"before syncing: {card1Denom}, {card1Suit}, {card2Denom}, {card2Suit}");
-                            // Sync the card and position to all clients via an RPC
-                            view.RPC("SyncPlayerData", RpcTarget.AllBuffered, shift, i, card1Denom, card1Suit, card2Denom, card2Suit);
-                        }
-                    }
-
-
-
-                    // Generates cards for the board
-                    for (int i = 0; i < 5; i++)
-                    {
-                        boardCards[i] = GenerateUniqueCard();
-                    }
-
-                    board = new(boardCards);
-
-                    // Add all players to an active players list 
-                    // Play the blinds
-
-                    // To change the starting PokerPlayer each round based on who is the SB
-                    activePokerPlayerIndex = (0 + positionEnum) % 4;
-                    sbIndex = activePokerPlayerIndex;
-                    if (pokerPlayers[activePokerPlayerIndex] != null)
-                    {
-                        currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                    }
-                    else
-                    {
-                        Debug.LogError("PokerPlayer at activePokerPlayerIndex is null");
-                    }
-
-
-                    // Manually processes the small blind
-                    currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25);
-                    PokerPlayer.SetPot(PokerPlayer.GetPot() + 25);
-
-                    // Move to big blind
-                    /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-                    view.RPC("MoveToNextPlayer", RpcTarget.All);
-                    currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-
-                    // Big Blind buts in his big blind
-                    currentPokerPlayer.Raise(BigBlind);
-
-                    // Move to next PokerPlayer
-                    /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-                    view.RPC("MoveToNextPlayer", RpcTarget.All);
-                    currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                    Debug.Log(" blinds played");
-                    PokerPlayer.DecreaseCallCounter();
-
-                    isPreFlop = false;
-                    isFlop = true;
-                    nextPokerPlayer = true;
-                    excuteSB = true;
-                    positionEnum++;
-                }
-
-
-
-                if (board.GetCurrentStreet().Equals(Board.Street.Flop))
-                {
-
-                    // It checks if it is true so it would only show the flop once
-                    if (isFlop)
-                    {
-                        Debug.Log("I am flopping");
-
-                        // Shows the flop cards
-                        Debug.Log(board.ToString());
-
-                        for (int i = 8; i < 11; i++)
-                        {
-                            cardImgs[i].gameObject.SetActive(true);
-                        }
-
-                        // To start the flop with the SB
-                        activePokerPlayerIndex = sbIndex;
-                        currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-
-                        /* Now isTurn is true but cannot access the turn cards unless the street is incremented
-                           If raised, it will not be ablt to show the turn cards 
-                         */
-                        isFlop = false;
-                        isTurn = true;
-                    }
-                }
-                else if (board.GetCurrentStreet().Equals(Board.Street.Turn))
-                {
-                    // It checks if it is true so it would only show the turn once
-                    if (isTurn)
-                    {
-                        Debug.Log("I am turning");
-                        Debug.Log(board.ToString());
-                        cardImgs[11].gameObject.SetActive(true);
-                        activePokerPlayerIndex = sbIndex;
-                        currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                        isTurn = false;
-                        isRiver = true;
-                    }
-                }
-                else if (board.GetCurrentStreet().Equals(Board.Street.River))
-                {
-                    // It checks if it is true so it would only show the river once
-                    if (isRiver)
-                    {
-                        Debug.Log("I am rivering");
-                        Debug.Log(board.ToString());
-                        cardImgs[12].gameObject.SetActive(true);
-                        activePokerPlayerIndex = sbIndex;
-                        currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                        isRiver = false;
-                    }
-                }
-
-                // Checks if the PokerPlayer is not folded
-                if (!currentPokerPlayer.IsFolded())
-                {
-
-                    // Prints on screen the PokerPlayer that is in turn to play once 
-                    if (nextPokerPlayer)
-                    {
-                        Debug.Log($"Current PokerPlayer is now PokerPlayer {currentPokerPlayer.GetNum()}");
-                        nextPokerPlayer = false;
-                    }
-
-                    if (PokerPlayer.IsGlobalRaised())
-                    {
-                        raiseNumber.gameObject.SetActive(true);
-                    }
-                    else
-                    {
-                        raiseNumber.gameObject.SetActive(false);
-                    }
-
-                }
-
-                // If PokerPlayer is folded, then move to next PokerPlayer
-                else
-                {
-                    /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-                    view.RPC("MoveToNextPlayer", RpcTarget.All);
-                    currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                    nextPokerPlayer = true;
-
-                }
-
-                // If the 3 people called or 4 people checked, then isGlobalRaised flag and the counter are reset to false and 0
-                if (PokerPlayer.GetCallCounter() == (activeplayers - 1) || PokerPlayer.GetCheckCounter() == activeplayers)
-                {
-                    PokerPlayer.ResetGlobals();
-
-                    // Resets the isChecked flag to false, raise to 0, and amountCalled to 0
-                    foreach (var pokerPlayer in pokerPlayers)
-                    {
-                        pokerPlayer.Reset();
-                    }
-
-                    // However if it is also on the showdown, that means the game has ended and a new hand is dealt
-                    if (board.GetCurrentStreet().Equals(Board.Street.Showdown))
-                    {
-                        foreach (var pokerPlayer in pokerPlayers)
-                        {
-                            pokerPlayer.Unfold();
-                        }
-                        isPreFlop = true;
-                    }
-                    else
-                    {
-
-                        // Move to next street if we are not in showdown
-                        board.IncrementStreet();
-                    }
-
-                }
-
-                if (PokerPlayer.GetFoldCounter() == (pokerPlayers.Length - 1))
-                {
-
-                    PokerPlayer.ResetGlobals();
-                    foreach (var pokerPlayer in pokerPlayers)
-                    {
-                        pokerPlayer.Reset();
-                        pokerPlayer.Unfold();
-                    }
-
-                    isPreFlop = true;
-                }
-
-            }
-        }
-        
-        }
-
-    [PunRPC]
-    public void SyncPlayerData(int shift, int playerIndex, int card1denom, int card1suit, int card2denom, int card2suit)
+    public int GetLocalSeatIndex()
     {
-        Debug.LogError($"while syncing: {card1denom}, {card1suit}, {card2denom}, {card2suit}");
-        Card card1 = new ((Card.Denomination) card1denom, (Card.Suit) card1suit);
-        Card card2 = new ((Card.Denomination)card2denom, (Card.Suit)card2suit);
-        // Set the player's pocket and position
-        if (pokerPlayers[playerIndex] != null)
-        {
-            pokerPlayers[playerIndex].SetPocket(new(card1, card2));
-            pokerPlayers[playerIndex].SetPosition((PokerPlayer.Position)((playerIndex + shift) % 4));
-        }
-        else
-        {
-            Debug.LogError($"This player {playerIndex} is not there");
-            pokerPlayers[playerIndex] = new (new(card1, card2), (PokerPlayer.Position)((playerIndex + shift) % 4), playerIndex + 1);
-        }
+        if (PhotonNetwork.LocalPlayer == null) return 0;
 
+        for (int i = 0; i < pokerPlayers.Count; i++)
+            if (pokerPlayers[i].ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+                return i;
 
-        // Update the UI only on the local player's client
-
-        for (int i = 0; i < pokerPlayers.Length; i++)
-        {
-
-            Debug.Log($"index: {i}");
-            Debug.Log($"Current Player device: {GameObject.Find("PokerDevice" + (i + 1))}");
-            GameMaster currentPlayerDevice = GameObject.Find("PokerDevice" + (i + 1)).GetComponent<GameMaster>();
-            Debug.Log($"Current: {currentPlayerDevice}");
-            currentPlayerDevice.SetCardSprite((Card.Denomination)card1denom, (Card.Suit)card1suit);
-            currentPlayerDevice.SetCardSprite((Card.Denomination)card2denom, (Card.Suit)card2suit);
-        }
-            
-            // Shows on screen the Pocket cards for every PokerPlayer
-
-            Debug.LogError("I drew my card");
-        
-            
-        
+        return 0;
     }
 
+    private PokerPlayer FindPlayerByActor(int actorNumber) =>
+        pokerPlayers.FirstOrDefault(p => p.ActorNumber == actorNumber);
 
+    // ────────────────────────────────────────────────────────────
+    //  Hand Lifecycle
+    // ────────────────────────────────────────────────────────────
 
-    // Generates a unique card
-    private Card GenerateUniqueCard()
+    private void StartNewHand()
     {
-        int denomination;
-        int suit;
+        // ── Eliminate broke players ───────────────────────────────
+        // Marked, never removed. pokerPlayers has to stay a fixed 4 slots so every
+        // client's array indices keep lining up (see BroadcastPublicState). An
+        // eliminated player just stays permanently folded from here on.
+        var newlyEliminated = pokerPlayers.Where(p => p.GetBalance() == 0 && !p.IsEliminated).ToList();
+        foreach (var e in newlyEliminated)
+        {
+            e.IsEliminated = true;
+            int stackBefore = stackAtHandStart.TryGetValue(e, out var s) ? s : 0;
+            eliminationLog.Add(new EliminationRecord
+            {
+                Player = e,
+                HandEliminated = handsPlayed,
+                StackBeforeThatHand = stackBefore
+            });
 
+            Debug.Log($"{e.GetName()} has been eliminated!");
+        }
 
-        // Keep generating random cards until a unique one is found or the max attempts is reached
+        // ── Tournament end check: 10 hands played, or down to one player ──
+        int stillIn = pokerPlayers.Count(p => !p.IsEliminated);
+        if (handsPlayed >= MAX_HANDS || stillIn < 2)
+        {
+            EndTournament();
+            return;
+        }
+
+        handsPlayed++;
+
+        // ── Reset hand state ──────────────────────────────────────
+        pots.Clear();
+        deck = new bool[13, 4];
+        boardCards = new Card[5];
+
+        if (uiManager != null) uiManager.ResetBoard();
+
+        foreach (var p in pokerPlayers)
+            p.ResetForNewHand();
+
+        ResetBettingState();
+
+        stackAtHandStart.Clear();
+        foreach (var p in pokerPlayers)
+            stackAtHandStart[p] = p.GetBalance();
+
+        // ── Advance dealer button ─────────────────────────────────
+        // Clamp dealerId in case a player was removed and list shrank
+        dealerId = dealerId % pokerPlayers.Count;
+        do { dealerId = (dealerId + 1) % pokerPlayers.Count; }
+        while (pokerPlayers[dealerId].GetBalance() == 0);
+
+        // ── Blinds ────────────────────────────────────────────────
+        sbId = GetNextActiveIndex(dealerId);
+        bbId = GetNextActiveIndex(sbId);
+
+        // ── Deal pocket cards (starting from SB, going around) ────
+        int idx = sbId;
         do
         {
-            denomination = UnityEngine.Random.Range(0, 13);
-            suit = UnityEngine.Random.Range(0, 4);
+            if (pokerPlayers[idx].GetBalance() > 0)
+                pokerPlayers[idx].DealPocket(
+                    new Pocket(GenerateUniqueCard(), GenerateUniqueCard()));
+
+            idx = (idx + 1) % pokerPlayers.Count;
         }
-        while (deck[denomination, suit]);
+        while (idx != sbId);
 
-        // Mark the card as used in the deck
-        deck[denomination, suit] = true;
+        foreach (var p in pokerPlayers)
+            if (p.GetBalance() > 0)
+                Debug.Log($"{p.GetName()} dealt: {p.GetPocket()}");
 
-        Card.Denomination cardDenomination = (Card.Denomination)denomination;
-        Card.Suit cardSuit = (Card.Suit)suit;
-        Card uniqueCard = new Card(cardDenomination, cardSuit);
+        if (uiManager != null) uiManager.DealPocketCards(pokerPlayers);
 
-        /*Debug.Log($"Generated unique card: Denomination {cardDenomination}, Suit {cardSuit}");*/
+        currentStreet = Street.Preflop;
 
-        return uniqueCard;
+        PostBlinds();
+
+        // First to act preflop = player after BB
+        playerId = GetNextActiveIndex(bbId);
+        Debug.Log($"--- Preflop begins. First to act: {CurrentPlayer.GetName()} ---");
+
+        // State first, then hole cards, so the board is already reset when cards land.
+        RefreshUI(isNewHand: true);
+        DealPocketCardsOverNetwork();
     }
 
+    // ────────────────────────────────────────────────────────────
+    //  Blinds  (bypass normal bet validation)
+    // ────────────────────────────────────────────────────────────
 
-    public void SetCardSprite(Card.Denomination cardDenomination, Card.Suit cardSuit)
+    private void PostBlinds()
     {
-        Debug.LogError($"CardspriteElement: {cardSpriteElement} ");
-        Debug.LogError($"CardDenom: {cardDenomination} CardSuit: {cardSuit}");
-        Sprite currentCard = GetCardSprite(cardDenomination, cardSuit);
+        PostBlind(pokerPlayers[sbId], SMALL_BLIND);
+        PostBlind(pokerPlayers[bbId], BIG_BLIND);
 
-        if (currentCard != null) // Check if the sprite is retrieved successfully
-        {
-            if (cardSpriteElement >= 0)
-            {
-                cardImgs[cardSpriteElement].sprite = currentCard;
-            }
-            cardSpriteElement++;
-            Debug.LogError($"After Addition CardspriteElement: {cardSpriteElement} ");
-            if (cardSpriteElement == 13)
-            {
-                cardSpriteElement = 0;
-            }
-        }
-        else
-        {
-            Debug.LogError("Current card sprite is null.");
-        }
-            /*  Make it reset after each hand
-             */
+        currentBetToCall = BIG_BLIND;
+        lastRaiseSize = BIG_BLIND;
+
+        Debug.Log($"{pokerPlayers[sbId].GetName()} posts SB ({SMALL_BLIND})");
+        Debug.Log($"{pokerPlayers[bbId].GetName()} posts BB ({BIG_BLIND})");
     }
 
-    public Sprite GetCardSprite(Card.Denomination denomination, Card.Suit suit)
+    private void PostBlind(PokerPlayer player, int amount)
     {
-        string cardKey = $"{denomination}_of_{suit}";
-        Debug.LogError($"(Getcardsprite function) CardDenom: {denomination} CardSuit: {suit}");
-        if (cardSpriteDictionary.ContainsKey(cardKey))
-        {
-            Debug.LogError($"Cardsprite: {cardSpriteDictionary[cardKey]} ");
-        }
-        else
-        {
-            Debug.LogError($"Cardsprite: card key is not here ");
-        }
-        
-        return cardSpriteDictionary.ContainsKey(cardKey) ? cardSpriteDictionary[cardKey] : null;
+        int actual = Mathf.Min(amount, player.GetBalance());
+        player.SetBalance(player.GetBalance() - actual);
+        player.totalContributed = actual;
+        AddToPot(player, actual);
     }
 
-    public void HandleRaise()
-    {
-        if (view.IsMine)
-        {
-            // If the SB raises in the preflop, the the rest of the small blind is taken
-            if (currentPokerPlayer.GetPosition().Equals(PokerPlayer.Position.SB) && board.GetCurrentStreet().Equals(Board.Street.Preflop) && excuteSB)
-            {
-                currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25 + 50);
-                PokerPlayer.SetPot(PokerPlayer.GetPot() + 25 - 50);
-                excuteSB = false;
-            }
-            // Get the raised amount from the text box
-            currentPokerPlayer.Raise(int.Parse(raiseNumber.text));
+    // ────────────────────────────────────────────────────────────
+    //  Public Actions
+    // ────────────────────────────────────────────────────────────
 
-            if (PokerPlayer.GetNumRaises() > 1)
+    public bool RequestFold(PokerPlayer player)
+    {
+        if (!IsPlayerTurn(player)) { Debug.Log("Not your turn."); return false; }
+        if (player.IsFolded()) { Debug.Log("Already folded."); return false; }
+
+        player.Fold();
+        player.hasActedThisStreet = true;
+
+        foreach (var pot in pots)
+            pot.eligiblePlayers.Remove(player);
+
+        Debug.Log($"{player.GetName()} folds.");
+
+        var active = pokerPlayers.Where(p => !p.IsFolded()).ToList();
+        if (active.Count == 1)
+        {
+            var winner = active[0];
+            int total = pots.Sum(pot => pot.amount);
+            bool isLocalWinner = winner == GetPlayer(GetLocalSeatIndex());
+
+            if (uiManager != null)
             {
-                view.RPC("PlayerActionMessage", RpcTarget.All, $"PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()} more. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                Debug.Log($"PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()} more. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+                uiManager.ShowHandResult($"{winner.GetName()} wins ${total} (everyone else folded)");
+                if (isLocalWinner) uiManager.SetShowCardsButtonVisible(true);
+                uiManager.DisableActionButtons();
+            }
+
+            // Mark the hand over so UpdateActionButtons stops trusting whose turn it
+            // technically still is. This fold never advances the turn, so without
+            // this a refresh could re-enable buttons based on stale turn state.
+            currentStreet = Street.Showdown;
+
+            AwardPotToLastPlayer(winner);
+            BroadcastUncontestedWin(winner, total);
+            RefreshUI();
+            PrepareNextHand();
+            return true;
+        }
+
+        AdvanceTurn();
+        if (IsBettingRoundComplete()) EndBettingRound();
+        RefreshUI();
+        return true;
+    }
+
+    public bool RequestCheck(PokerPlayer player)
+    {
+        if (!IsPlayerTurn(player)) { Debug.Log("Not your turn."); return false; }
+        if (player.IsFolded()) { Debug.Log("Already folded."); return false; }
+        if (player.IsAllIn) { Debug.Log("You are all-in."); return false; }
+
+        if (currentBetToCall != player.totalContributed)
+        {
+            Debug.Log($"Cannot check – must call {currentBetToCall - player.totalContributed}.");
+            return false;
+        }
+
+        player.hasActedThisStreet = true;
+        Debug.Log($"{player.GetName()} checks.");
+
+        AdvanceTurn();
+        if (IsBettingRoundComplete()) EndBettingRound();
+        RefreshUI();
+        return true;
+    }
+
+    public bool RequestCall(PokerPlayer player)
+    {
+        if (!IsPlayerTurn(player)) { Debug.Log("Not your turn."); return false; }
+        if (player.IsFolded()) { Debug.Log("Already folded."); return false; }
+        if (player.IsAllIn) { Debug.Log("You are all-in."); return false; }
+
+        int toCall = currentBetToCall - player.totalContributed;
+        if (toCall <= 0) { Debug.Log("Nothing to call – use Check."); return false; }
+
+        int actual = Mathf.Min(toCall, player.GetBalance());
+        player.SetBalance(player.GetBalance() - actual);
+        player.totalContributed += actual;
+        AddToPot(player, actual);
+
+        player.hasActedThisStreet = true;
+        Debug.Log($"{player.GetName()} calls {actual}.");
+
+        AdvanceTurn();
+        if (IsBettingRoundComplete()) EndBettingRound();
+        RefreshUI();
+        return true;
+    }
+
+    public bool RequestBet(PokerPlayer player, int amount)
+    {
+        if (!IsPlayerTurn(player)) { Debug.Log("Not your turn."); return false; }
+        if (player.IsFolded()) { Debug.Log("Already folded."); return false; }
+        if (player.IsAllIn) { Debug.Log("You are all-in."); return false; }
+
+        if (currentBetToCall != 0)
+        {
+            Debug.Log("There is already a bet – use Raise instead.");
+            return false;
+        }
+
+        if (amount < BIG_BLIND)
+        {
+            Debug.Log($"Minimum bet is {BIG_BLIND}.");
+            return false;
+        }
+
+        int actual = Mathf.Min(amount, player.GetBalance());
+        player.SetBalance(player.GetBalance() - actual);
+        player.totalContributed += actual;
+        AddToPot(player, actual);
+
+        lastRaiseSize = actual;
+        currentBetToCall = actual;
+
+        player.hasActedThisStreet = true;
+        ResetHasActedExcept(player);
+
+        Debug.Log($"{player.GetName()} bets {actual}.");
+
+        AdvanceTurn();
+        if (IsBettingRoundComplete()) EndBettingRound();
+        RefreshUI();
+        return true;
+    }
+
+    public bool RequestRaise(PokerPlayer player, int raiseToAmount)
+    {
+        if (!IsPlayerTurn(player)) { Debug.Log("Not your turn."); return false; }
+        if (player.IsFolded()) { Debug.Log("Already folded."); return false; }
+        if (player.IsAllIn) { Debug.Log("You are all-in."); return false; }
+
+        if (raiseToAmount <= currentBetToCall)
+        {
+            Debug.Log($"Raise must be above current bet of {currentBetToCall}.");
+            return false;
+        }
+
+        int raiseBy = raiseToAmount - currentBetToCall;
+        int maxPossible = player.totalContributed + player.GetBalance();
+
+        if (raiseBy < lastRaiseSize && raiseToAmount != maxPossible)
+        {
+            Debug.Log($"Min raise is {lastRaiseSize}. Raise to at least {currentBetToCall + lastRaiseSize}.");
+            return false;
+        }
+
+        int chipsNeeded = raiseToAmount - player.totalContributed;
+        if (chipsNeeded > player.GetBalance()) { Debug.Log("Not enough chips."); return false; }
+
+        int actual = Mathf.Min(chipsNeeded, player.GetBalance());
+        player.SetBalance(player.GetBalance() - actual);
+        player.totalContributed += actual;
+        AddToPot(player, actual);
+
+        lastRaiseSize = raiseBy;
+        currentBetToCall = raiseToAmount;
+
+        player.hasActedThisStreet = true;
+        ResetHasActedExcept(player);
+
+        Debug.Log($"{player.GetName()} raises to {raiseToAmount}.");
+
+        AdvanceTurn();
+        if (IsBettingRoundComplete()) EndBettingRound();
+        RefreshUI();
+        return true;
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Networked Action Requests (UI calls these, not Request* directly)
+    // ────────────────────────────────────────────────────────────
+
+    public void SendFoldRequest()
+    {
+        if (PhotonNetwork.InRoom) photonView.RPC(nameof(RPC_Fold), RpcTarget.MasterClient);
+        else RequestFold(GetPlayer(GetLocalSeatIndex()));
+    }
+
+    public void SendCheckRequest()
+    {
+        if (PhotonNetwork.InRoom) photonView.RPC(nameof(RPC_Check), RpcTarget.MasterClient);
+        else RequestCheck(GetPlayer(GetLocalSeatIndex()));
+    }
+
+    public void SendCallRequest()
+    {
+        if (PhotonNetwork.InRoom) photonView.RPC(nameof(RPC_Call), RpcTarget.MasterClient);
+        else RequestCall(GetPlayer(GetLocalSeatIndex()));
+    }
+
+    public void SendBetRequest(int amount)
+    {
+        if (PhotonNetwork.InRoom) photonView.RPC(nameof(RPC_Bet), RpcTarget.MasterClient, amount);
+        else RequestBet(GetPlayer(GetLocalSeatIndex()), amount);
+    }
+
+    public void SendRaiseRequest(int amount)
+    {
+        if (PhotonNetwork.InRoom) photonView.RPC(nameof(RPC_Raise), RpcTarget.MasterClient, amount);
+        else RequestRaise(GetPlayer(GetLocalSeatIndex()), amount);
+    }
+
+    [PunRPC]
+    private void RPC_Fold(PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+        var player = FindPlayerByActor(info.Sender.ActorNumber);
+        if (player != null) RequestFold(player);
+    }
+
+    [PunRPC]
+    private void RPC_Check(PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+        var player = FindPlayerByActor(info.Sender.ActorNumber);
+        if (player != null) RequestCheck(player);
+    }
+
+    [PunRPC]
+    private void RPC_Call(PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+        var player = FindPlayerByActor(info.Sender.ActorNumber);
+        if (player != null) RequestCall(player);
+    }
+
+    [PunRPC]
+    private void RPC_Bet(int amount, PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+        var player = FindPlayerByActor(info.Sender.ActorNumber);
+        if (player != null) RequestBet(player, amount);
+    }
+
+    [PunRPC]
+    private void RPC_Raise(int raiseToAmount, PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+        var player = FindPlayerByActor(info.Sender.ActorNumber);
+        if (player != null) RequestRaise(player, raiseToAmount);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Betting Helpers
+    // ────────────────────────────────────────────────────────────
+
+    private bool IsPlayerTurn(PokerPlayer player) => player == CurrentPlayer;
+
+    private void RefreshUI(bool isNewHand = false)
+    {
+        if (uiManager != null)
+            uiManager.RefreshUI(pokerPlayers, boardCards, pots, currentBetToCall,
+                playerId, dealerId, sbId, bbId, currentStreet.ToString());
+
+        if (PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient)
+            BroadcastPublicState(isNewHand);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Networking (Photon), master-authoritative state sync
+    // ────────────────────────────────────────────────────────────
+
+    // Everything needed to render the table, minus hole cards.
+    private void BroadcastPublicState(bool isNewHand)
+    {
+        if (!PhotonNetwork.InRoom) return;
+
+        int n = pokerPlayers.Count;
+        int[] balances = new int[n];
+        int[] contributed = new int[n];
+        bool[] folded = new bool[n];
+
+        for (int i = 0; i < n; i++)
+        {
+            balances[i] = pokerPlayers[i].GetBalance();
+            contributed[i] = pokerPlayers[i].totalContributed;
+            folded[i] = pokerPlayers[i].IsFolded();
+        }
+
+        int potTotal = pots.Sum(p => p.amount);
+
+        photonView.RPC(nameof(RPC_SyncPublicState), RpcTarget.Others,
+            balances, contributed, folded, potTotal, currentBetToCall, lastRaiseSize,
+            playerId, dealerId, sbId, bbId, (int)currentStreet, isNewHand);
+    }
+
+    [PunRPC]
+    private void RPC_SyncPublicState(int[] balances, int[] contributed, bool[] folded, int potTotal,
+        int betToCall, int lastRaise, int turnIndex, int dealer, int sb, int bb, int streetIndex, bool isNewHand)
+    {
+        if (PhotonNetwork.IsMasterClient) return;
+
+        if (isNewHand)
+        {
+            if (uiManager != null) uiManager.ResetBoard();
+            boardCards = new Card[5];
+            foreach (var p in pokerPlayers) p.ResetForNewHand();
+        }
+
+        for (int i = 0; i < pokerPlayers.Count && i < balances.Length; i++)
+        {
+            pokerPlayers[i].SetBalance(balances[i]);
+            pokerPlayers[i].totalContributed = contributed[i];
+            if (folded[i]) pokerPlayers[i].Fold();
+        }
+
+        currentBetToCall = betToCall;
+        lastRaiseSize = lastRaise;
+        playerId = turnIndex;
+        dealerId = dealer;
+        sbId = sb;
+        bbId = bb;
+        currentStreet = (Street)streetIndex;
+
+        pots.Clear();
+        var syncedPot = new Pot();
+        syncedPot.amount = potTotal;
+        pots.Add(syncedPot);
+
+        if (uiManager != null)
+            uiManager.RefreshUI(pokerPlayers, boardCards, pots, currentBetToCall,
+                playerId, dealerId, sbId, bbId, currentStreet.ToString());
+    }
+
+    // Each player's hole cards go out as a targeted RPC, never broadcast.
+    private void DealPocketCardsOverNetwork()
+    {
+        if (!PhotonNetwork.InRoom) return;
+
+        foreach (var p in pokerPlayers)
+        {
+            if (p.ActorNumber < 0 || p.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber) continue;
+
+            var targetPlayer = PhotonNetwork.CurrentRoom.Players.Values
+                .FirstOrDefault(pl => pl.ActorNumber == p.ActorNumber);
+            if (targetPlayer == null) continue;
+
+            var cards = p.GetPocket().GetCards();
+            photonView.RPC(nameof(RPC_DealPocket), targetPlayer,
+                (int)cards[0].GetDenomination(), (int)cards[0].GetSuit(),
+                (int)cards[1].GetDenomination(), (int)cards[1].GetSuit());
+        }
+    }
+
+    [PunRPC]
+    private void RPC_DealPocket(int d1, int s1, int d2, int s2)
+    {
+        var card1 = new Card((Card.Denomination)d1, (Card.Suit)s1);
+        var card2 = new Card((Card.Denomination)d2, (Card.Suit)s2);
+        pokerPlayers[GetLocalSeatIndex()].DealPocket(new Pocket(card1, card2));
+
+        if (uiManager != null) uiManager.DealPocketCards(pokerPlayers);
+    }
+
+    // Voluntary reveal (e.g. after winning uncontested). Broadcast to everyone
+    // else since showing your own cards only matters if other people see it.
+    public void SendShowCardsRequest()
+    {
+        if (!PhotonNetwork.InRoom) return;
+
+        var cards = GetPlayer(GetLocalSeatIndex()).GetPocket().GetCards();
+        photonView.RPC(nameof(RPC_RevealOwnCards), RpcTarget.Others,
+            (int)cards[0].GetDenomination(), (int)cards[0].GetSuit(),
+            (int)cards[1].GetDenomination(), (int)cards[1].GetSuit());
+    }
+
+    [PunRPC]
+    private void RPC_RevealOwnCards(int d1, int s1, int d2, int s2, PhotonMessageInfo info)
+    {
+        var player = FindPlayerByActor(info.Sender.ActorNumber);
+        if (player == null) return;
+
+        var card1 = new Card((Card.Denomination)d1, (Card.Suit)s1);
+        var card2 = new Card((Card.Denomination)d2, (Card.Suit)s2);
+        player.DealPocket(new Pocket(card1, card2));
+
+        if (uiManager != null)
+            uiManager.RevealSeatCards(pokerPlayers.IndexOf(player), card1, card2);
+    }
+
+    private void BroadcastUncontestedWin(PokerPlayer winner, int total)
+    {
+        if (!PhotonNetwork.InRoom) return;
+
+        int n = pokerPlayers.Count;
+        int[] balances = new int[n];
+        for (int i = 0; i < n; i++)
+            balances[i] = pokerPlayers[i].GetBalance();
+
+        photonView.RPC(nameof(RPC_UncontestedWin), RpcTarget.Others, winner.ActorNumber, total, balances);
+    }
+
+    [PunRPC]
+    private void RPC_UncontestedWin(int winnerActorNumber, int total, int[] balances)
+    {
+        if (PhotonNetwork.IsMasterClient) return;
+
+        for (int i = 0; i < pokerPlayers.Count && i < balances.Length; i++)
+            pokerPlayers[i].SetBalance(balances[i]);
+
+        var winner = FindPlayerByActor(winnerActorNumber);
+        if (uiManager != null && winner != null)
+        {
+            uiManager.ShowHandResult($"{winner.GetName()} wins ${total} (everyone else folded)");
+            if (winnerActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+                uiManager.SetShowCardsButtonVisible(true);
+            uiManager.DisableActionButtons();
+        }
+
+        pots.Clear();
+    }
+
+    private bool IsBettingRoundComplete()
+    {
+        var active = pokerPlayers.Where(p => !p.IsFolded() && !p.IsAllIn).ToList();
+
+        if (active.Count <= 1)
+            return true;
+
+        if (active.Any(p => !p.hasActedThisStreet))
+            return false;
+
+        if (active.Any(p => p.totalContributed != currentBetToCall))
+            return false;
+
+        return true;
+    }
+
+    private void ResetHasActedExcept(PokerPlayer actor)
+    {
+        foreach (var p in pokerPlayers)
+            if (!p.IsFolded() && !p.IsAllIn)
+                p.hasActedThisStreet = false;
+
+        actor.hasActedThisStreet = true;
+    }
+
+    private void ResetBettingState()
+    {
+        currentBetToCall = 0;
+        lastRaiseSize = BIG_BLIND;
+
+        foreach (var p in pokerPlayers)
+        {
+            p.totalContributed = 0;
+            p.hasActedThisStreet = false;
+        }
+    }
+
+    private void AdvanceTurn()
+    {
+        playerId = GetNextActiveIndex(playerId);
+        Debug.Log($"Turn: {CurrentPlayer.GetName()}");
+    }
+
+    // Next player with chips who hasn't folded/isn't all-in. Safety counter guards
+    // against an infinite loop if literally everyone left is folded/all-in/broke.
+    private int GetNextActiveIndex(int fromIndex)
+    {
+        int idx = fromIndex;
+        int safety = pokerPlayers.Count;
+
+        do
+        {
+            idx = (idx + 1) % pokerPlayers.Count;
+            safety--;
+        }
+        while (
+            (pokerPlayers[idx].GetBalance() == 0 ||
+             pokerPlayers[idx].IsFolded() ||
+             pokerPlayers[idx].IsAllIn)
+            && safety > 0
+        );
+
+        return idx;
+    }
+
+    private void SetFirstPlayerToActPostFlop()
+    {
+        // First active player to the left of the dealer
+        playerId = GetNextActiveIndex(dealerId);
+        Debug.Log($"First to act: {CurrentPlayer.GetName()}");
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Street Progression
+    // ────────────────────────────────────────────────────────────
+
+    private void EndBettingRound()
+    {
+        Debug.Log($"--- Betting round over ({currentStreet}) ---");
+        LogPots();
+        ResetBettingState();
+
+        switch (currentStreet)
+        {
+            case Street.Preflop:
+                currentStreet = Street.Flop;
+                RevealFlop();
+                SetFirstPlayerToActPostFlop();
+                break;
+
+            case Street.Flop:
+                currentStreet = Street.Turn;
+                RevealTurn();
+                SetFirstPlayerToActPostFlop();
+                break;
+
+            case Street.Turn:
+                currentStreet = Street.River;
+                RevealRiver();
+                SetFirstPlayerToActPostFlop();
+                break;
+
+            case Street.River:
+                currentStreet = Street.Showdown;
+                ResolveShowdown();
+                break;
+        }
+    }
+
+    private void RevealFlop()
+    {
+        boardCards[0] = GenerateUniqueCard();
+        boardCards[1] = GenerateUniqueCard();
+        boardCards[2] = GenerateUniqueCard();
+        Debug.Log($"=== FLOP: {boardCards[0]}  {boardCards[1]}  {boardCards[2]} ===");
+        if (uiManager != null) uiManager.RevealFlop(boardCards[0], boardCards[1], boardCards[2]);
+
+        if (PhotonNetwork.InRoom)
+            photonView.RPC(nameof(RPC_RevealFlop), RpcTarget.Others,
+                (int)boardCards[0].GetDenomination(), (int)boardCards[0].GetSuit(),
+                (int)boardCards[1].GetDenomination(), (int)boardCards[1].GetSuit(),
+                (int)boardCards[2].GetDenomination(), (int)boardCards[2].GetSuit());
+    }
+
+    private void RevealTurn()
+    {
+        boardCards[3] = GenerateUniqueCard();
+        Debug.Log($"=== TURN: {boardCards[3]} ===");
+        if (uiManager != null) uiManager.RevealTurn(boardCards[3]);
+
+        if (PhotonNetwork.InRoom)
+            photonView.RPC(nameof(RPC_RevealTurn), RpcTarget.Others,
+                (int)boardCards[3].GetDenomination(), (int)boardCards[3].GetSuit());
+    }
+
+    private void RevealRiver()
+    {
+        boardCards[4] = GenerateUniqueCard();
+        Debug.Log($"=== RIVER: {boardCards[4]} ===");
+        if (uiManager != null) uiManager.RevealRiver(boardCards[4]);
+
+        if (PhotonNetwork.InRoom)
+            photonView.RPC(nameof(RPC_RevealRiver), RpcTarget.Others,
+                (int)boardCards[4].GetDenomination(), (int)boardCards[4].GetSuit());
+    }
+
+    [PunRPC]
+    private void RPC_RevealFlop(int d1, int s1, int d2, int s2, int d3, int s3)
+    {
+        if (PhotonNetwork.IsMasterClient) return;
+        boardCards[0] = new Card((Card.Denomination)d1, (Card.Suit)s1);
+        boardCards[1] = new Card((Card.Denomination)d2, (Card.Suit)s2);
+        boardCards[2] = new Card((Card.Denomination)d3, (Card.Suit)s3);
+        if (uiManager != null) uiManager.RevealFlop(boardCards[0], boardCards[1], boardCards[2]);
+    }
+
+    [PunRPC]
+    private void RPC_RevealTurn(int d, int s)
+    {
+        if (PhotonNetwork.IsMasterClient) return;
+        boardCards[3] = new Card((Card.Denomination)d, (Card.Suit)s);
+        if (uiManager != null) uiManager.RevealTurn(boardCards[3]);
+    }
+
+    [PunRPC]
+    private void RPC_RevealRiver(int d, int s)
+    {
+        if (PhotonNetwork.IsMasterClient) return;
+        boardCards[4] = new Card((Card.Denomination)d, (Card.Suit)s);
+        if (uiManager != null) uiManager.RevealRiver(boardCards[4]);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Pot Management
+    // ────────────────────────────────────────────────────────────
+
+    private void AddToPot(PokerPlayer player, int amount)
+    {
+        int remaining = amount;
+
+        if (pots.Count == 0)
+        {
+            var mainPot = new Pot();
+            mainPot.amount = remaining;
+            foreach (var p in pokerPlayers)
+                if (!p.IsFolded())
+                    mainPot.eligiblePlayers.Add(p);
+            pots.Add(mainPot);
+            return;
+        }
+
+        foreach (var pot in pots)
+        {
+            if (remaining <= 0) break;
+
+            int cap = pot.eligiblePlayers
+                .Where(p => p.IsAllIn)
+                .Select(p => p.totalContributed)
+                .DefaultIfEmpty(int.MaxValue)
+                .Min();
+
+            if (cap == int.MaxValue)
+            {
+                // No all-in cap – everything goes here
+                pot.amount += remaining;
+                remaining = 0;
             }
             else
             {
-                Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} raised by {currentPokerPlayer.AmountRaised()}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+                int canAdd = Mathf.Max(0, cap - (player.totalContributed - amount));
+                int toAdd = Mathf.Min(remaining, canAdd);
+                pot.amount += toAdd;
+                remaining -= toAdd;
             }
-
-            // Move to the next PokerPlayer
-            /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-            view.RPC("MoveToNextPlayer", RpcTarget.All);
-            currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-            nextPokerPlayer = true;
         }
 
+        // Any overflow creates a new side pot
+        if (remaining > 0)
+        {
+            var sidePot = new Pot();
+            sidePot.amount = remaining;
+            foreach (var p in pokerPlayers)
+                if (!p.IsFolded() && p.totalContributed >= player.totalContributed)
+                    sidePot.eligiblePlayers.Add(p);
+            pots.Add(sidePot);
+        }
     }
 
-    
-
-    public void HandleCheck()
+    private void AwardPotToLastPlayer(PokerPlayer winner)
     {
-        
-        
-        if (view == null)
+        int total = pots.Sum(pot => pot.amount);
+        winner.SetBalance(winner.GetBalance() + total);
+        Debug.Log($"{winner.GetName()} wins {total} (everyone else folded).");
+        pots.Clear();
+    }
+
+    private void LogPots()
+    {
+        for (int i = 0; i < pots.Count; i++)
+            Debug.Log($"Pot {i}: {pots[i].amount} chips " +
+                      $"({pots[i].eligiblePlayers.Count} eligible players)");
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Showdown  (with split pot support)
+    // ────────────────────────────────────────────────────────────
+
+    private void ResolveShowdown()
+    {
+        Debug.Log("=== SHOWDOWN ===");
+
+        foreach (var p in pokerPlayers.Where(p => !p.IsFolded()))
+            Debug.Log($"{p.GetName()}: {p.GetPocket()}");
+
+        if (uiManager != null)
         {
-            Debug.LogError("PhotonView is not initialized. Ensure this script is attached to a GameObject with a PhotonView component.");
-            return; // Exit if the PhotonView is null
+            uiManager.ShowShowdown(pokerPlayers);
+            uiManager.DisableActionButtons();
         }
-        if (view.IsMine)
+
+        string resultMessage = null;
+        PokerPlayer displayWinner = null;
+        List<Card> winningFive = null;
+
+        foreach (var pot in pots)
         {
-            // If someone raised, and you pressed C, you will Call 
-            if (PokerPlayer.IsGlobalRaised())
+            var contenders = pot.eligiblePlayers.Where(p => !p.IsFolded()).ToList();
+            if (contenders.Count == 0) continue;
+
+            var results = contenders.ToDictionary(p => p, p => GetPlayerHandResult(p));
+
+            // ── Find the best score ───────────────────────────────
+            int[] bestScore = null;
+            foreach (var r in results.Values)
+                if (bestScore == null || CompareScores(r.Score, bestScore) > 0)
+                    bestScore = r.Score;
+
+            // ── Collect everyone who ties for best ────────────────
+            var winners = contenders
+                .Where(p => CompareScores(results[p].Score, bestScore) == 0)
+                .ToList();
+
+            // ── Split pot (odd chip goes to first winner left of dealer) ──
+            int share = pot.amount / winners.Count;
+            int remainder = pot.amount % winners.Count;
+
+            for (int i = 0; i < winners.Count; i++)
             {
-
-                // Manually detucts the 25 from the SB if he calls
-                if (currentPokerPlayer.GetPosition().Equals(PokerPlayer.Position.SB) && board.GetCurrentStreet().Equals(Board.Street.Preflop))
-                {
-                    if (excuteSB)
-                    {
-                        currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() - 25);
-                        PokerPlayer.SetPot(PokerPlayer.GetPot() + 25);
-                        view.RPC("PlayerActionMessage", RpcTarget.All, $" PokerPlayer {currentPokerPlayer.GetNum()} with position {currentPokerPlayer.GetPosition()} called the rest of the blind, 25.");
-                        Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} with position {currentPokerPlayer.GetPosition()} called the rest of the blind, 25. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                        excuteSB = false;
-                    }
-
-                    /* I know this does not make sense but trust me, it is a very silly edge case that I have to cover*/
-                    if ((currentPokerPlayer.GetPreviousRaises() - 50) != 0)
-                    {
-                        currentPokerPlayer.Call();
-                        PokerPlayer.DecreaseCallCounter();
-                        currentPokerPlayer.SetBalance(currentPokerPlayer.GetBalance() + 50);
-                        PokerPlayer.SetPot(PokerPlayer.GetPot() - 50);
-                        view.RPC("PlayerActionMessage", RpcTarget.All, $" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises() - 50}.");
-                        Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises() - 50}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-
-                    }
-                    PokerPlayer.IncreaseCallCounter();
-                }
-                /*If it is the BB in the preflop, then it checks. It has to be inside the if (PokerPlayer.IsGlobalRaised())
-                because the GlobalRaised is not yet false because the call counter has not reached its goal*/
-                else if (currentPokerPlayer.GetPosition().Equals(PokerPlayer.Position.BB) && board.GetCurrentStreet().Equals(Board.Street.Preflop))
-                {
-                    /* Another edge case */
-                    if (PokerPlayer.GetNumRaises() > 1)
-                    {
-                        currentPokerPlayer.Call();
-                        view.RPC("PlayerActionMessage", RpcTarget.All, $" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises()}.");
-                        Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises()}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                    }
-                    else
-                    {
-                        currentPokerPlayer.Check();
-                        PokerPlayer.IncreaseCallCounter();
-                        view.RPC("PlayerActionMessage", RpcTarget.All, $" PokerPlayer {currentPokerPlayer.GetNum()} checked.");
-                        Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} checked. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-                    }
-
-                }
-                // Just a normal call
-                else
-                {
-                    currentPokerPlayer.Call();
-                    view.RPC("PlayerActionMessage", RpcTarget.All, $" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises()}.");
-                    Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} called {currentPokerPlayer.GetPreviousRaises()}. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-
-                }
-
-                // Move to the next PokerPlayer
-                /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-                view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                nextPokerPlayer = true;
+                int award = share + (i == 0 ? remainder : 0);
+                winners[i].SetBalance(winners[i].GetBalance() + award);
             }
 
-            // If no one raised, then normal check
+            string rankName = RankingNames[bestScore[0]];
+            string potMessage = winners.Count == 1
+                ? $"{winners[0].GetName()} wins ${pot.amount} with {rankName}!"
+                : $"Split pot of ${pot.amount} ({rankName}) between: " +
+                  string.Join(", ", winners.Select(w => w.GetName()));
+
+            Debug.Log(potMessage);
+
+            if (resultMessage == null)
+            {
+                resultMessage = potMessage;
+                displayWinner = winners[0];
+                winningFive = results[winners[0]].BestFive;
+            }
+        }
+
+        if (uiManager != null && resultMessage != null)
+        {
+            uiManager.ShowHandResult(resultMessage);
+            uiManager.HighlightWinningHand(pokerPlayers.IndexOf(displayWinner), displayWinner, boardCards, winningFive);
+        }
+
+        if (resultMessage != null) BroadcastShowdown(resultMessage, displayWinner, winningFive);
+
+        pots.Clear();
+        LogBalances();
+        PrepareNextHand();
+    }
+
+    // Hand's over, so hole card privacy no longer applies. Safe to reveal to everyone now.
+    private void BroadcastShowdown(string resultMessage, PokerPlayer displayWinner, List<Card> winningFive)
+    {
+        if (!PhotonNetwork.InRoom) return;
+
+        var revealed = pokerPlayers.Where(p => !p.IsFolded()).ToList();
+        int[] actorNumbers = revealed.Select(p => p.ActorNumber).ToArray();
+        int[] cardInts = new int[revealed.Count * 4];
+
+        for (int i = 0; i < revealed.Count; i++)
+        {
+            var cards = revealed[i].GetPocket().GetCards();
+            cardInts[i * 4 + 0] = (int)cards[0].GetDenomination();
+            cardInts[i * 4 + 1] = (int)cards[0].GetSuit();
+            cardInts[i * 4 + 2] = (int)cards[1].GetDenomination();
+            cardInts[i * 4 + 3] = (int)cards[1].GetSuit();
+        }
+
+        int winnerActorNumber = displayWinner != null ? displayWinner.ActorNumber : -1;
+        int[] winningFiveInts = null;
+        if (winningFive != null)
+        {
+            winningFiveInts = new int[winningFive.Count * 2];
+            for (int i = 0; i < winningFive.Count; i++)
+            {
+                winningFiveInts[i * 2] = (int)winningFive[i].GetDenomination();
+                winningFiveInts[i * 2 + 1] = (int)winningFive[i].GetSuit();
+            }
+        }
+
+        photonView.RPC(nameof(RPC_Showdown), RpcTarget.Others,
+            actorNumbers, cardInts, resultMessage, winnerActorNumber, winningFiveInts);
+    }
+
+    [PunRPC]
+    private void RPC_Showdown(int[] revealActorNumbers, int[] revealCardInts, string resultMessage,
+        int winnerActorNumber, int[] winningFiveInts)
+    {
+        if (PhotonNetwork.IsMasterClient) return;
+
+        for (int i = 0; i < revealActorNumbers.Length; i++)
+        {
+            var player = FindPlayerByActor(revealActorNumbers[i]);
+            if (player == null) continue;
+
+            int baseIdx = i * 4;
+            var c1 = new Card((Card.Denomination)revealCardInts[baseIdx], (Card.Suit)revealCardInts[baseIdx + 1]);
+            var c2 = new Card((Card.Denomination)revealCardInts[baseIdx + 2], (Card.Suit)revealCardInts[baseIdx + 3]);
+            player.DealPocket(new Pocket(c1, c2));
+        }
+
+        if (uiManager != null)
+        {
+            uiManager.ShowShowdown(pokerPlayers);
+            uiManager.DisableActionButtons();
+        }
+
+        if (uiManager != null && resultMessage != null)
+        {
+            uiManager.ShowHandResult(resultMessage);
+
+            var winner = FindPlayerByActor(winnerActorNumber);
+            if (winner != null && winningFiveInts != null)
+            {
+                var winningFive = new List<Card>();
+                for (int i = 0; i < winningFiveInts.Length; i += 2)
+                    winningFive.Add(new Card((Card.Denomination)winningFiveInts[i], (Card.Suit)winningFiveInts[i + 1]));
+
+                uiManager.HighlightWinningHand(pokerPlayers.IndexOf(winner), winner, boardCards, winningFive);
+            }
+        }
+    }
+
+    // Hand's over, wait for the host to press Start Next Hand instead of an auto timer.
+    private void PrepareNextHand()
+    {
+        bool isHost = !PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient;
+
+        if (uiManager != null)
+        {
+            uiManager.SetStatusText(isHost ? "" : "Waiting for host to start the next hand...");
+            uiManager.SetStartNextHandButtonVisible(isHost);
+        }
+    }
+
+    // Only the host's button ever calls this. Everyone else's copy is hidden, but
+    // guard anyway in case a networked non-host click gets through some other way.
+    public void RequestStartNextHand()
+    {
+        if (PhotonNetwork.InRoom && !PhotonNetwork.IsMasterClient) return;
+
+        if (uiManager != null)
+        {
+            uiManager.SetStartNextHandButtonVisible(false);
+            uiManager.SetStatusText("");
+        }
+
+        StartNewHand();
+    }
+
+    // Builds 7-card pool for a player and returns their best 5-card hand
+    private HandResult GetPlayerHandResult(PokerPlayer player)
+    {
+        var seven = new List<Card>();
+        seven.AddRange(player.GetPocket().GetCards());
+        foreach (var bc in boardCards)
+            if (bc != null) seven.Add(bc);
+        return EvaluateHand(seven);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Hand Evaluation
+    // ────────────────────────────────────────────────────────────
+
+    // Tries all C(7,5)=21 combinations, keeps the best score and the 5 cards behind it.
+    private HandResult EvaluateHand(List<Card> sevenCards)
+    {
+        HandResult best = default;
+        bool found = false;
+
+        for (int a = 0; a < sevenCards.Count - 4; a++)
+            for (int b = a + 1; b < sevenCards.Count - 3; b++)
+                for (int c = b + 1; c < sevenCards.Count - 2; c++)
+                    for (int d = c + 1; d < sevenCards.Count - 1; d++)
+                        for (int e = d + 1; e < sevenCards.Count; e++)
+                        {
+                            var five = new List<Card>
+                { sevenCards[a], sevenCards[b], sevenCards[c], sevenCards[d], sevenCards[e] };
+                            var score = ScoreFiveCards(five);
+                            if (!found || CompareScores(score, best.Score) > 0)
+                            {
+                                best = new HandResult { Score = score, BestFive = five };
+                                found = true;
+                            }
+                        }
+
+        return best;
+    }
+
+    // Returns int[0]=rank, then tiebreaker card values in priority order. Higher array = better hand.
+    private int[] ScoreFiveCards(List<Card> cards)
+    {
+        var vals = cards
+            .Select(c => (int)c.GetDenomination()) // Two=0 … Ace=12
+            .OrderByDescending(v => v)
+            .ToList();
+
+        var suits = cards.Select(c => (int)c.GetSuit()).ToList();
+        bool flush = suits.Distinct().Count() == 1;
+
+        bool straight = false;
+        int straightHigh = 0;
+
+        // Normal straight
+        if (vals[0] - vals[4] == 4 && vals.Distinct().Count() == 5)
+        {
+            straight = true;
+            straightHigh = vals[0];
+        }
+
+        // Wheel: A-2-3-4-5
+        if (!straight && vals.SequenceEqual(new[] { 12, 3, 2, 1, 0 }))
+        {
+            straight = true;
+            straightHigh = 3;
+        }
+
+        var groups = vals
+            .GroupBy(v => v)
+            .OrderByDescending(g => g.Count())
+            .ThenByDescending(g => g.Key)
+            .ToList();
+
+        int[] counts = groups.Select(g => g.Count()).ToArray();
+        int[] keys = groups.Select(g => g.Key).ToArray();
+
+        if (flush && straight && straightHigh == 12)
+            return new[] { (int)Ranking.RoyalFlush };
+
+        if (flush && straight)
+            return new[] { (int)Ranking.StraightFlush, straightHigh };
+
+        if (counts[0] == 4)
+            return new[] { (int)Ranking.FourOfAKind, keys[0], keys[1] };
+
+        if (counts[0] == 3 && counts[1] == 2)
+            return new[] { (int)Ranking.FullHouse, keys[0], keys[1] };
+
+        if (flush)
+            return new[] { (int)Ranking.Flush }.Concat(vals).ToArray();
+
+        if (straight)
+            return new[] { (int)Ranking.Straight, straightHigh };
+
+        if (counts[0] == 3)
+            return new[] { (int)Ranking.ThreeOfAKind, keys[0], keys[1], keys[2] };
+
+        if (counts[0] == 2 && counts[1] == 2)
+            return new[] { (int)Ranking.TwoPair, keys[0], keys[1], keys[2] };
+
+        if (counts[0] == 2)
+            return new[] { (int)Ranking.Pair, keys[0], keys[1], keys[2], keys[3] };
+
+        return new[] { (int)Ranking.HighCard }.Concat(vals).ToArray();
+    }
+
+    // +1 if a wins, -1 if b wins, 0 if tied.
+    private int CompareScores(int[] a, int[] b)
+    {
+        int len = Mathf.Min(a.Length, b.Length);
+        for (int i = 0; i < len; i++)
+        {
+            if (a[i] > b[i]) return 1;
+            if (a[i] < b[i]) return -1;
+        }
+        return 0;
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Card Generation
+    // ────────────────────────────────────────────────────────────
+
+    private Card GenerateUniqueCard()
+    {
+        int d, s;
+        do
+        {
+            d = Random.Range(0, 13);
+            s = Random.Range(0, 4);
+        }
+        while (deck[d, s]);
+
+        deck[d, s] = true;
+        return new Card((Card.Denomination)d, (Card.Suit)s);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Logging
+    // ────────────────────────────────────────────────────────────
+
+    private void LogBalances()
+    {
+        Debug.Log("── Balances ──");
+        foreach (var p in pokerPlayers)
+            Debug.Log($"  {p.GetName()}: {p.GetBalance()}");
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Tournament End / Final Ranking
+    //  Entry point for the minigame handoff: call GetFinalRanking()
+    //  once the tournament is over to get the 4 players best-to-worst.
+    // ────────────────────────────────────────────────────────────
+
+    // The result of GetFinalRanking(), null until EndTournament() has run. Either
+    // computed locally (master) or received via RPC_FinalRanking (everyone else).
+    // Non-master clients never track eliminations locally, so GetFinalRanking()
+    // has to hand back this cached, broadcast value instead of recomputing anything.
+    private List<PokerPlayer> cachedFinalRanking;
+
+    private void EndTournament()
+    {
+        Debug.Log($"=== TOURNAMENT OVER (after {handsPlayed} hands) ===");
+
+        cachedFinalRanking = ComputeFinalRanking();
+        for (int i = 0; i < cachedFinalRanking.Count; i++)
+            Debug.Log($"  {i + 1}. {cachedFinalRanking[i].GetName()} - ${cachedFinalRanking[i].GetBalance()}");
+
+        if (uiManager != null)
+            uiManager.ShowMessage($"{cachedFinalRanking[0].GetName()} finishes 1st!", 10f);
+
+        if (PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient)
+            BroadcastFinalRanking(cachedFinalRanking);
+    }
+
+    // Still-standing players first by current balance, then eliminated players by
+    // who survived longer, same-hand eliminations broken by chips going into it.
+    // Only ever accurate when called on the master, use GetFinalRanking() elsewhere.
+    private List<PokerPlayer> ComputeFinalRanking()
+    {
+        var ranking = new List<PokerPlayer>();
+
+        ranking.AddRange(pokerPlayers.Where(p => !p.IsEliminated).OrderByDescending(p => p.GetBalance()));
+
+        ranking.AddRange(eliminationLog
+            .OrderByDescending(e => e.HandEliminated)
+            .ThenByDescending(e => e.StackBeforeThatHand)
+            .Select(e => e.Player));
+
+        return ranking;
+    }
+
+    // The 4 players ordered best to worst. Safe to call from any client once the
+    // tournament has ended, null before that. Handoff point for the minigame,
+    // higher position means better powerup.
+    public List<PokerPlayer> GetFinalRanking() => cachedFinalRanking;
+
+    private void BroadcastFinalRanking(List<PokerPlayer> ranking)
+    {
+        if (!PhotonNetwork.InRoom) return;
+        photonView.RPC(nameof(RPC_FinalRanking), RpcTarget.Others, ranking.Select(p => p.ActorNumber).ToArray());
+    }
+
+    [PunRPC]
+    private void RPC_FinalRanking(int[] actorNumbersInOrder)
+    {
+        if (PhotonNetwork.IsMasterClient) return;
+
+        cachedFinalRanking = actorNumbersInOrder.Select(FindPlayerByActor).Where(p => p != null).ToList();
+        if (uiManager != null && cachedFinalRanking.Count > 0)
+            uiManager.ShowMessage($"{cachedFinalRanking[0].GetName()} finishes 1st!", 10f);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Testing
+    // ────────────────────────────────────────────────────────────
+
+    [ContextMenu("Run Test Hand")]
+    public void RunTestHand()
+    {
+        Debug.Log("=== RunTestHand: everyone calls/checks to showdown ===");
+        int safety = 200;
+        while (currentStreet != Street.Showdown && safety-- > 0)
+        {
+            var p = CurrentPlayer;
+            if (currentBetToCall == p.totalContributed)
+                RequestCheck(p);
             else
-            {
-                currentPokerPlayer.Check();
-                view.RPC("PlayerActionMessage", RpcTarget.All, $" PokerPlayer {currentPokerPlayer.GetNum()} checked.");
-                Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} checked. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
-
-                // Move to the next PokerPlayer
-                /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-                view.RPC("MoveToNextPlayer", RpcTarget.All);
-                currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-                nextPokerPlayer = true;
-            }
+                RequestCall(p);
         }
-
     }
 
-    public void HandleFold()
+    void Update()
     {
-        if (view.IsMine)
-        {
-            currentPokerPlayer.Fold();
-            view.RPC("PlayerActionMessage", RpcTarget.All, $" PokerPlayer {currentPokerPlayer.GetNum()} folded.");
-            Debug.Log($" PokerPlayer {currentPokerPlayer.GetNum()} folded. Current balance: {currentPokerPlayer.GetBalance()} Current pot: {PokerPlayer.GetPot()}");
+        // Offline debug shortcuts only, would desync a networked table.
+        if (PhotonNetwork.InRoom) return;
+        if (currentStreet == Street.Showdown) return;
+        var p = CurrentPlayer;
 
-            // Move to the next PokerPlayer
-            /*activePokerPlayerIndex = (activePokerPlayerIndex + 1) % players.Count;*/
-            view.RPC("MoveToNextPlayer", RpcTarget.All);
-            currentPokerPlayer = pokerPlayers[activePokerPlayerIndex];
-            activeplayers--;
-            nextPokerPlayer = true;
-        }
-
+        if (Input.GetKeyDown(KeyCode.F)) RequestFold(p);
+        if (Input.GetKeyDown(KeyCode.C)) RequestCheck(p);
+        if (Input.GetKeyDown(KeyCode.Space)) RequestCall(p);
+        if (Input.GetKeyDown(KeyCode.R)) RequestRaise(p, currentBetToCall + 20);
+        if (Input.GetKeyDown(KeyCode.B)) RequestBet(p, 20);
     }
-
-    [PunRPC]
-    public void MoveToNextPlayer()
-    {
-        activePokerPlayerIndex = (activePokerPlayerIndex + 1) % pokerPlayers.Length;
-    }
-
-    [PunRPC]
-    public void NewPot(int money)
-    {
-        PokerPlayer.SetPot(money);
-    }
-
-    [PunRPC]
-    public void PlayerActionMessage(String message)
-    {
-        if (view.Owner.ActorNumber == 1)
-        {
-            player1Action.text = message;
-        }
-        else if (view.Owner.ActorNumber == 2)
-        {
-            player2Action.text = message;
-        }
-        else if (view.Owner.ActorNumber == 3)
-        {
-            player3Action.text = message;
-        }
-        else if (view.Owner.ActorNumber == 4)
-        {
-            player4Action.text = message;
-        }
-    }
-    private List<List<(int,int)>> GenerateAllHands(Pocket pocket, Board board)
-    {
-        /* although variable is called sevenCardHand it could also include 6 cards
-            gets all cards available to the player
-        */
-        List<Card> tempCards = new List<Card>(pocket.GetCards());
-        tempCards.AddRange(board.GetFlop());
-
-
-        List<(int denomination, int suit)> cards = new List<(int, int)>{};
-
-        
-        // converts Card[denomination, suit] into List<(int,int)> format
-        foreach (Card card in tempCards)
-        {
-            cards.Add(((int)card.GetDenomination(), (int)card.GetSuit()));
-        }
-
-
-        
-        /* generates all possible 5-card hands from cards available to player
-            and stores in combinations */
-        int r = 5;
-        List<List<(int,int)>> combinations = GetCombinations(cards, r);
-
-        return combinations;
-
-        
-        /* recursive function to calculate all combinations
-            calls GenerateCombination as helper function
-        */
-        static List<List<(int,int)>> GetCombinations(List<(int,int)> cards, int r)
-        {
-            List<List<(int,int)>> result = new List<List<(int,int)>>();
-            List<(int,int)> combination = new List<(int,int)>();
-
-            GenerateCombinations(cards, r, 0, combination, result);
-            return result;
-        }
-        
-        
-        static void GenerateCombinations(List<(int,int)> cards, int r, int start, List<(int,int)> combination, List<List<(int,int)>> result)
-        {
-            
-            if (combination.Count == r)
-            {
-                result.Add(new List<(int,int)>(combination));
-                return;
-            }
-
-
-            for (int i = start; i < cards.Count; i++)
-            {
-                combination.Add(cards[i]);
-                GenerateCombinations(cards, r, i + 1, combination, result);
-                combination.RemoveAt(combination.Count - 1);
-            }
-        }
-    }
-
-    private Ranking DetermineBestHand(List<List<(int,int)>> listOfHands)
-        {
-
-            static int determineHandType(List<int> denominationList, bool isFlush, bool isStraight)
-                {
-                    if (isFlush && isStraight)                                  return (int)Ranking.CardRank.StraightFlush;              
-                    if (denominationList.SequenceEqual(new List<int>{4,1}))     return (int)Ranking.CardRank.FourOfAKind;
-                    if (denominationList.SequenceEqual(new List<int>{3,2}))     return (int)Ranking.CardRank.FullHouse;
-                    if (isFlush)                                                return (int)Ranking.CardRank.Flush;
-                    if (isStraight)                                             return (int)Ranking.CardRank.Straight;
-                    if (denominationList.SequenceEqual(new List<int>{3,1,1}))   return (int)Ranking.CardRank.ThreeOfAKind;
-                    if (denominationList.SequenceEqual(new List<int>{2,2,1}))   return (int)Ranking.CardRank.TwoPair;
-                    if (denominationList.SequenceEqual(new List<int>{2,1,1,1})) return (int)Ranking.CardRank.Pair;
-                    return (int)Ranking.CardRank.HighCard;
-                }
-
-
-
-            /* sort cards from highest denomination to lowest denomination in each hand
-                example of sortedHand = [9,4] [7,2] [7,1] [5,3] [5,2] 
-            */
-            List<List<(int,int)>> sortedHands = new List<List<(int, int)>>();
-
-            foreach (var hand in listOfHands)
-            {
-                var sortedHand = hand.OrderByDescending(card => card.Item1).ToList();
-                sortedHands.Add(sortedHand);
-            }
-
-
-            int strongestHandLevel = -1;
-            int currentHandLevel = -1;
-            List<List<(int,int)>> topRankedHands = new List<List<(int, int)>>();
-
-            foreach (var hand in sortedHands)
-            {
-                // determines whether current hand is flush or straight
-                bool isFlush = true;
-                bool isStraight = true;
-
-                int straightDenomination = hand[0].Item1;
-                int flushSuit = hand[0].Item2;
-            
-                foreach (var card in hand)
-                {
-                    if (card.Item2 != flushSuit) isFlush = false;
-                    if (card.Item1 != straightDenomination) isStraight = false;
-                    straightDenomination--;
-                }
-
-                
-                /* here we count the number of occurrences of each rank, which helps us determine
-                whether the hand is a four of a kind, three of a kind, pair.. etc
-                */
-                Dictionary<int, int> denominationCounts = new Dictionary<int, int>();
-
-                foreach (var (x, y) in hand)
-                {
-                    if (denominationCounts.ContainsKey(x))
-                    {
-                        denominationCounts[x]++;
-                    }
-                    else
-                    {
-                        denominationCounts[x] = 1;
-                    }
-                }
-
-                List<int> denominationList = denominationCounts.Values.ToList();
-                denominationList = denominationList.OrderByDescending(n => n).ToList();
-
-                currentHandLevel = determineHandType(denominationList, isFlush, isStraight);
-
-                // keep a list of only the highest ranking hands
-                if (currentHandLevel > strongestHandLevel)
-                {
-                    strongestHandLevel = currentHandLevel;
-                    topRankedHands.Clear();
-                    topRankedHands.Add(hand);
-                }
-                else if (currentHandLevel == strongestHandLevel)
-                {
-                    topRankedHands.Add(hand);
-                }
-
-            }
-
-            
-            // only 1 best hand, so no showdown needed
-            if (topRankedHands.Count == 1) return null;
-
-            
-            // more than 1 hand of same rank, so showdown needed
-            switch (strongestHandLevel)
-            {
-                case 0:
-                    // high card showdown
-                    
-
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 5:
-                case 6:
-                case 7:
-                case 8:
-                case 9:
-                    break;
-            }
-
-            return null;
-
-        }
 }
-

@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// Sits on the GameMaster object next to SinglePlayerGameMaster. Wire everything up in the Inspector.
+// Sits on the same GameMaster object as the GameMaster script. Wire everything up in the Inspector.
 public class PokerUIManager : MonoBehaviour
 {
     // ──────────────────────────────
@@ -12,7 +12,7 @@ public class PokerUIManager : MonoBehaviour
     // ──────────────────────────────
 
     [Header("Game Master")]
-    public SinglePlayerGameMaster gameMaster;
+    public GameMaster gameMaster;
 
     [Header("Player Seats (0=Bottom/You, 1=Left, 2=Top, 3=Right)")]
     public PlayerSeatUI[] seats = new PlayerSeatUI[4];
@@ -108,11 +108,11 @@ public class PokerUIManager : MonoBehaviour
     }
 
     // ──────────────────────────────
-    //  Public API called by SinglePlayerGameMaster
+    //  Public API called by GameMaster
     // ──────────────────────────────
 
     public void RefreshUI(
-        List<TestPokerPlayer> players,
+        List<PokerPlayer> players,
         Card[] boardCards,
         List<Pot> pots,
         int currentBetToCall,
@@ -170,7 +170,7 @@ public class PokerUIManager : MonoBehaviour
             seat.ResetForNewHand();
     }
 
-    public void DealPocketCards(List<TestPokerPlayer> players)
+    public void DealPocketCards(List<PokerPlayer> players)
     {
         for (int i = 0; i < players.Count && i < seats.Length; i++)
         {
@@ -196,7 +196,7 @@ public class PokerUIManager : MonoBehaviour
         StartCoroutine(ClearMessageAfter(duration));
     }
 
-    public void ShowShowdown(List<TestPokerPlayer> players)
+    public void ShowShowdown(List<PokerPlayer> players)
     {
         for (int i = 0; i < players.Count && i < seats.Length; i++)
         {
@@ -230,7 +230,7 @@ public class PokerUIManager : MonoBehaviour
         }
     }
 
-    public void HighlightWinningHand(int winnerSeatIndex, TestPokerPlayer winner, Card[] boardCards, List<Card> winningFive)
+    public void HighlightWinningHand(int winnerSeatIndex, PokerPlayer winner, Card[] boardCards, List<Card> winningFive)
     {
         ClearWinningHighlights();
         if (winningFive == null) return;
@@ -348,7 +348,7 @@ public class PokerUIManager : MonoBehaviour
     }
 
     private void UpdatePlayerSeats(
-        List<TestPokerPlayer> players,
+        List<PokerPlayer> players,
         int currentPlayerId,
         int dealerId, int sbId, int bbId,
         string streetName)
@@ -390,7 +390,7 @@ public class PokerUIManager : MonoBehaviour
     }
 
     private void UpdateActionButtons(
-        List<TestPokerPlayer> players,
+        List<PokerPlayer> players,
         int currentBetToCall,
         int currentPlayerId,
         string streetName)
@@ -425,7 +425,7 @@ public class PokerUIManager : MonoBehaviour
         if (raiseSlider != null) raiseSlider.interactable = false;
     }
 
-    private void UpdateRaiseSlider(List<TestPokerPlayer> players, int currentBetToCall)
+    private void UpdateRaiseSlider(List<PokerPlayer> players, int currentBetToCall)
     {
         cachedBetToCall = currentBetToCall;
         var local = players[LOCAL_PLAYER_INDEX];

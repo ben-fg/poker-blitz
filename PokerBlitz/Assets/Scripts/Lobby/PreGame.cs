@@ -9,15 +9,15 @@ public class PreGame : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI[] preGameText = new TextMeshProUGUI[9];
     [SerializeField] private Image[] preGameImages = new Image[4];
-    [SerializeField] private Sprite[] preGameSprites = new Sprite[3 * GameMaster.maxGames];
+    [SerializeField] private Sprite[] preGameSprites = new Sprite[3 * MinigameSelection.maxGames];
     [SerializeField] private Sprite gameplaySprite;
     PhotonView view;
 
     void Start()
     {
-        GameMaster.gameNumber = 4;
+        MinigameSelection.gameNumber = 4;
         view = GetComponent<PhotonView>();
-        if (GameMaster.gameNumber == 1)
+        if (MinigameSelection.gameNumber == 1)
         {
             preGameText[0].text = "Jump across the platforms to climb the tower. Be the first player to reach the top.";
             preGameText[1].text = "A - Move left\nD - Move right\nSpace or W (Hold) - Jump\nShift - Use ability";
@@ -29,7 +29,7 @@ public class PreGame : MonoBehaviour
             preGameText[7].text = "Jump again in mid-air. [Cooldown: 4s]";
             preGameText[8].text = "Tower Ascent";
         }
-        if (GameMaster.gameNumber == 2)
+        if (MinigameSelection.gameNumber == 2)
         {
             preGameText[0].text = "Shoot other players to eliminate them. First player to 20 eliminations wins.";
             preGameText[1].text = "W - Move Up\nS - Move Down\nA - Move left\nD - Move right\nMouse - Aim\nLeft Click - Shoot";
@@ -41,7 +41,7 @@ public class PreGame : MonoBehaviour
             preGameText[7].text = "Your shots travel very fast and you can see further, but you have less health.";
             preGameText[8].text = "Cannons";
         }
-        if (GameMaster.gameNumber == 4)
+        if (MinigameSelection.gameNumber == 4)
         {
             preGameText[0].text = "Coins will fall down the screen, click them to grab. Player with the most coins when the time is up wins.";
             preGameText[1].text = "Mouse - Aim\nLeft click - Grab";
@@ -56,7 +56,7 @@ public class PreGame : MonoBehaviour
         preGameImages[3].sprite = gameplaySprite;
         for (int i = 0; i < preGameImages.Length - 1; i++)
         {
-            preGameImages[i].sprite = GetSprite(GameMaster.gameNumber - 1, i);
+            preGameImages[i].sprite = GetSprite(MinigameSelection.gameNumber - 1, i);
         }
     }
 
