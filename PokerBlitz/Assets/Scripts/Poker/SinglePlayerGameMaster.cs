@@ -112,7 +112,7 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
         }
         else
         {
-            // Offline (e.g. Play in Editor with no room) - fall back to local AI names.
+            // Offline (e.g. Play in Editor with no room), fall back to local AI names.
             string[] names = { "Moaz", "Tom", "Issa", "Charan" };
             foreach (string n in names)
             {
@@ -146,7 +146,7 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
     private void StartNewHand()
     {
         // ── Eliminate broke players ───────────────────────────────
-        // Marked, never removed - pokerPlayers must stay a fixed 4 slots so every
+        // Marked, never removed. pokerPlayers has to stay a fixed 4 slots so every
         // client's array indices keep lining up (see BroadcastPublicState). An
         // eliminated player just stays permanently folded from here on.
         var newlyEliminated = pokerPlayers.Where(p => p.GetBalance() == 0 && !p.IsEliminated).ToList();
@@ -287,8 +287,8 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
             }
 
             // Mark the hand over so UpdateActionButtons stops trusting whose turn it
-            // technically still is - this fold never advances the turn, so without
-            // this, a refresh could re-enable buttons based on stale turn state.
+            // technically still is. This fold never advances the turn, so without
+            // this a refresh could re-enable buttons based on stale turn state.
             currentStreet = Street.Showdown;
 
             AwardPotToLastPlayer(winner);
@@ -519,7 +519,7 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
     }
 
     // ────────────────────────────────────────────────────────────
-    //  Networking (Photon) — master-authoritative state sync
+    //  Networking (Photon), master-authoritative state sync
     // ────────────────────────────────────────────────────────────
 
     // Everything needed to render the table, minus hole cards.
@@ -614,8 +614,8 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
         if (uiManager != null) uiManager.DealPocketCards(pokerPlayers);
     }
 
-    // Voluntary reveal (e.g. after winning uncontested) - broadcast to everyone
-    // else, since showing your own cards only matters if other people see it.
+    // Voluntary reveal (e.g. after winning uncontested). Broadcast to everyone
+    // else since showing your own cards only matters if other people see it.
     public void SendShowCardsRequest()
     {
         if (!PhotonNetwork.InRoom) return;
@@ -993,7 +993,7 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
         PrepareNextHand();
     }
 
-    // Hand's over, so hole card privacy no longer applies - safe to reveal to everyone.
+    // Hand's over, so hole card privacy no longer applies. Safe to reveal to everyone now.
     private void BroadcastShowdown(string resultMessage, TestPokerPlayer displayWinner, List<Card> winningFive)
     {
         if (!PhotonNetwork.InRoom) return;
@@ -1066,7 +1066,7 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
         }
     }
 
-    // Hand's over - wait for the host to press Start Next Hand instead of an auto-timer.
+    // Hand's over, wait for the host to press Start Next Hand instead of an auto timer.
     private void PrepareNextHand()
     {
         bool isHost = !PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient;
@@ -1078,7 +1078,7 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
         }
     }
 
-    // Only the host's button ever calls this - everyone else's copy is hidden, but
+    // Only the host's button ever calls this. Everyone else's copy is hidden, but
     // guard anyway in case a networked non-host click gets through some other way.
     public void RequestStartNextHand()
     {
@@ -1246,10 +1246,10 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
     //  once the tournament is over to get the 4 players best-to-worst.
     // ────────────────────────────────────────────────────────────
 
-    // The result of GetFinalRanking(), null until EndTournament() has run - either
+    // The result of GetFinalRanking(), null until EndTournament() has run. Either
     // computed locally (master) or received via RPC_FinalRanking (everyone else).
     // Non-master clients never track eliminations locally, so GetFinalRanking()
-    // must hand back this cached, broadcast value rather than recomputing anything.
+    // has to hand back this cached, broadcast value instead of recomputing anything.
     private List<TestPokerPlayer> cachedFinalRanking;
 
     private void EndTournament()
@@ -1269,7 +1269,7 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
 
     // Still-standing players first by current balance, then eliminated players by
     // who survived longer, same-hand eliminations broken by chips going into it.
-    // Only ever accurate when called on the master - use GetFinalRanking() elsewhere.
+    // Only ever accurate when called on the master, use GetFinalRanking() elsewhere.
     private List<TestPokerPlayer> ComputeFinalRanking()
     {
         var ranking = new List<TestPokerPlayer>();
@@ -1285,8 +1285,8 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
     }
 
     // The 4 players ordered best to worst. Safe to call from any client once the
-    // tournament has ended - null before that. Handoff point for the minigame:
-    // higher position = better powerup.
+    // tournament has ended, null before that. Handoff point for the minigame,
+    // higher position means better powerup.
     public List<TestPokerPlayer> GetFinalRanking() => cachedFinalRanking;
 
     private void BroadcastFinalRanking(List<TestPokerPlayer> ranking)
@@ -1326,7 +1326,7 @@ public class SinglePlayerGameMaster : MonoBehaviourPun
 
     void Update()
     {
-        // Offline debug shortcuts only - would desync a networked table.
+        // Offline debug shortcuts only, would desync a networked table.
         if (PhotonNetwork.InRoom) return;
         if (currentStreet == Street.Showdown) return;
         var p = CurrentPlayer;

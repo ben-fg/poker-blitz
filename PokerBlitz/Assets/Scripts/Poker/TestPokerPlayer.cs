@@ -22,7 +22,7 @@ public class TestPokerPlayer
     public int totalContributed;   // total money put in this hand
 
     public bool IsAllIn => balance == 0;
-    public bool IsEliminated; // out for the rest of the tournament - stays true, never dealt in again
+    public bool IsEliminated; // out for the rest of the tournament, stays true forever
 
 
     public TestPokerPlayer(string name)

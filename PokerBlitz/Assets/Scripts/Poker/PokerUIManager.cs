@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// Sits on the GameMaster object next to SinglePlayerGameMaster - wire everything up in the Inspector.
+// Sits on the GameMaster object next to SinglePlayerGameMaster. Wire everything up in the Inspector.
 public class PokerUIManager : MonoBehaviour
 {
     // ──────────────────────────────
@@ -61,8 +61,8 @@ public class PokerUIManager : MonoBehaviour
     //  Private State
     // ──────────────────────────────
 
-    // Seat of the local player - not cached, since it isn't known until the game
-    // master has built its roster, which can happen after this component's Awake.
+    // Seat of the local player. Not cached since it isn't known until the game
+    // master builds its roster, which can happen after this component's Awake.
     private int LOCAL_PLAYER_INDEX => gameMaster.GetLocalSeatIndex();
 
     private int raiseAmount;
@@ -108,7 +108,7 @@ public class PokerUIManager : MonoBehaviour
     }
 
     // ──────────────────────────────
-    //  Public API - called by SinglePlayerGameMaster
+    //  Public API called by SinglePlayerGameMaster
     // ──────────────────────────────
 
     public void RefreshUI(
@@ -285,8 +285,8 @@ public class PokerUIManager : MonoBehaviour
         if (startNextHandButton != null) startNextHandButton.gameObject.SetActive(visible);
     }
 
-    // Reveals THIS client's own cards on THIS client's screen only - broadcasting
-    // the reveal to everyone else is gameMaster's job, since it owns the network layer.
+    // Reveals THIS client's own cards on THIS client's screen only. Broadcasting
+    // the reveal to everyone else is gameMaster's job since it owns the network layer.
     public void RevealSeatCards(int canonicalIndex, Card c1, Card c2)
     {
         seats[ToUiSlot(canonicalIndex)].ShowCards(c1, c2);
@@ -353,7 +353,7 @@ public class PokerUIManager : MonoBehaviour
         int dealerId, int sbId, int bbId,
         string streetName)
     {
-        // Same reasoning as UpdateActionButtons - once the hand's over, currentPlayerId
+        // Same reasoning as UpdateActionButtons. Once the hand's over, currentPlayerId
         // is stale (nobody's turn advances on the fold that ends a hand), so nobody
         // should light up as "active turn" no matter what it still says.
         bool handOver = streetName == "Showdown";
@@ -396,7 +396,7 @@ public class PokerUIManager : MonoBehaviour
         string streetName)
     {
         // Once the hand's over, nobody's turn means anything anymore, no matter what
-        // currentPlayerId still happens to say - never trust it past Showdown.
+        // currentPlayerId still happens to say. Never trust it past Showdown.
         bool isLocalTurn = streetName != "Showdown" && currentPlayerId == LOCAL_PLAYER_INDEX;
         var localPlayer = players[LOCAL_PLAYER_INDEX];
 
@@ -413,8 +413,8 @@ public class PokerUIManager : MonoBehaviour
         callAmountText.text = toCall > 0 ? $"Call  ${Mathf.Min(toCall, localPlayer.GetBalance())}" : "Call";
     }
 
-    // Hand's over - grey out every action button regardless of whose turn it
-    // technically still is, so nothing looks clickable while waiting for the next hand.
+    // Hand's over, so grey out every action button regardless of whose turn it
+    // technically still is. Nothing should look clickable while waiting for the next hand.
     public void DisableActionButtons()
     {
         if (foldButton != null) foldButton.interactable = false;

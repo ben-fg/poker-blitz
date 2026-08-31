@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// Attach to each PlayerSeat prefab - holds all the UI refs for one seat.
+// Attach to each PlayerSeat prefab. Holds all the UI refs for one seat.
 public class PlayerSeatUI : MonoBehaviour
 {
     [Header("Player Info")]
