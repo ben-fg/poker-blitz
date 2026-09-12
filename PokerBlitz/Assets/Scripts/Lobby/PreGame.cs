@@ -43,7 +43,7 @@ public class PreGame : MonoBehaviour
         }
         if (GameMaster.gameNumber == 4)
         {
-            preGameText[0].text = "Coins will fall down the screen, click them to grab. Player with the most coins when the time is up wins.";
+            preGameText[0].text = "Coins will fall down the screen, click them to grab. Player with the most coins when the time is up wins. Red coins = 5x";
             preGameText[1].text = "Mouse - Aim\nLeft click - Grab";
             preGameText[2].text = "Streaker";
             preGameText[3].text = "Grabbing 5 coins in a row rewards a bonus. Missing resets the streak.";

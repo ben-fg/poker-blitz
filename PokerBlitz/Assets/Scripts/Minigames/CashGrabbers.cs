@@ -54,6 +54,23 @@ public class CashGrabbers : MonoBehaviour
         }
     }
 
+    void DisableOtherCameras()
+    {
+        Camera[] allCameras = Camera.allCameras;
+
+        foreach (Camera cam in allCameras)
+        {
+            bool isMainCamera = cam.CompareTag("MainCamera");
+            Camera childcam = GetComponentInChildren<Camera>();
+
+            if (!isMainCamera && cam != childcam)
+            {
+                cam.enabled = false;
+            }
+        }
+    }
+
+
     [PunRPC]
     public void SetCursorColour(int viewID, int colourIndex)
     {
@@ -78,10 +95,26 @@ public class CashGrabbers : MonoBehaviour
 
         if (view.IsMine)
         {
+            DisableOtherCameras();
             if (Input.GetKeyDown(KeyCode.Mouse0))
             {
                 HandleClick();
             }
+        }
+    }
+
+    void OnTriggerEnter2D(Collider2D coin)
+    {
+        if (coin.CompareTag("Coin") && (int)PhotonNetwork.LocalPlayer.CustomProperties["PowerUp"] == 3)
+        {
+            Debug.Log("Tax Collected");
+            points += coin.gameObject.GetComponent<Coin>().coinPoints;
+            PhotonView coinView = coin.GetComponent<PhotonView>();
+            if (coinView != null)
+            {
+                view.RPC("RequestDestroyCoin", RpcTarget.MasterClient, coinView.ViewID);
+            }
+            view.RPC("ShowPoints", RpcTarget.All, points, PhotonNetwork.LocalPlayer.ActorNumber);
         }
     }
 
@@ -105,7 +138,12 @@ public class CashGrabbers : MonoBehaviour
             }
             coinCollect.Play();
             points += hit.collider.gameObject.GetComponent<Coin>().coinPoints;
-            Destroy(hit.collider.gameObject);
+            PhotonView coinView = hit.collider.GetComponent<PhotonView>();
+            if (coinView != null)
+            {
+                view.RPC("RequestDestroyCoin", RpcTarget.MasterClient, coinView.ViewID);
+            }
+            //PhotonNetwork.Destroy(hit.collider.gameObject);
             view.RPC("ShowPoints", RpcTarget.All, points, PhotonNetwork.LocalPlayer.ActorNumber);
             Debug.Log("Coin clicked by player: " + view.Owner.NickName);
 
@@ -116,6 +154,21 @@ public class CashGrabbers : MonoBehaviour
             streak = 0;
         }
     }
+
+    // On all clients
+    [PunRPC]
+    public void RequestDestroyCoin(int viewID)
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            PhotonView view = PhotonView.Find(viewID);
+            if (view != null)
+            {
+                PhotonNetwork.Destroy(view.gameObject);
+            }
+        }
+    }
+
 
     [PunRPC]
     public void ShowPoints(int playePoints, int actorNum)
