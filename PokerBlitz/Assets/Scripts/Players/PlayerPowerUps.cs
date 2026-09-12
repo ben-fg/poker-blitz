@@ -60,7 +60,7 @@ public class PlayerPowerUps : MonoBehaviour
             startCountdown = -20;
         }
 
-        if (GameMaster.gameNumber == 1)
+        if (MinigameSelection.gameNumber == 1)
         {
             //Debug.Log("num "+powerUpNum);
             //Debug.Log("cooldown " + powerUpCooldowns[2]);
@@ -132,7 +132,7 @@ public class PlayerPowerUps : MonoBehaviour
                 }
             }
         }
-        else if (GameMaster.gameNumber == 2)
+        else if (MinigameSelection.gameNumber == 2)
         {
             if (selectionEnd)
             {
@@ -225,7 +225,7 @@ public class PlayerPowerUps : MonoBehaviour
                 }
             }
         }
-        else if (GameMaster.gameNumber == 4)
+        else if (MinigameSelection.gameNumber == 4)
         {
             if (selectionEnd)
             {

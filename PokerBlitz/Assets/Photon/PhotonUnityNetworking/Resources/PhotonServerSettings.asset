@@ -64,6 +64,22 @@ MonoBehaviour:
   - SetCursorColour
   - IsCoinRed
   - RequestDestroyCoin
+  - SetDeviceName
+  - SyncPokerPlayers
+  - RPC_Bet
+  - RPC_Call
+  - RPC_Check
+  - RPC_DealPocket
+  - RPC_Fold
+  - RPC_Raise
+  - RPC_RevealFlop
+  - RPC_RevealRiver
+  - RPC_RevealTurn
+  - RPC_Showdown
+  - RPC_SyncPublicState
+  - RPC_UncontestedWin
+  - RPC_FinalRanking
+  - RPC_RevealOwnCards
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

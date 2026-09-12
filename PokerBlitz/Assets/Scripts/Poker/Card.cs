@@ -57,4 +57,19 @@ public class Card
     {
         this.denomination = denomination;
     }
+
+    public override string ToString()
+    {
+        return $"{denomination} of {suit}";
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is Card other && denomination == other.denomination && suit == other.suit;
+    }
+
+    public override int GetHashCode()
+    {
+        return ((int)denomination << 2) | (int)suit;
+    }
 }
