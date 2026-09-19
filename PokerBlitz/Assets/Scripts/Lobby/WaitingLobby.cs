@@ -13,7 +13,7 @@ public class WaitingLobby : MonoBehaviour
 
     void Start()
     {
-        MinigameSelection.gameNumber = 1;
+        MinigameSelection.gameNumber = 0;
         PhotonNetwork.AutomaticallySyncScene = true;
     }
 
@@ -38,13 +38,13 @@ public class WaitingLobby : MonoBehaviour
     {
         if (PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.PlayerCount >= requiredPlayers)
         {
-            PhotonNetwork.LoadLevel("PreGame");
+            PhotonNetwork.LoadLevel("GameSelector");
         }
     }
 
     public void ForceStart()
     {
-        PhotonNetwork.LoadLevel("PreGame");
+        PhotonNetwork.LoadLevel("GameSelector");
     }
 
     public void PokerForceStart()

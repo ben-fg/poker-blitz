@@ -220,7 +220,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6193240712b7730478a6cf2fdcb13d07, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 8538664965484656657, guid: 46ebe46e51b091443b88ad90903cc93c, type: 3}
+  playerPrefab: {fileID: 8538664965484656657, guid: 7b937fc726494244185280103e647fc6, type: 3}
   spawnPos: {x: 0, y: 0}
   multiSpawnPos:
   - {x: 0, y: 0}

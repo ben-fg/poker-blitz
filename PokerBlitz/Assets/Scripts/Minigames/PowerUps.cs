@@ -15,7 +15,8 @@ public class PowerUps : MonoBehaviour
     [SerializeField] TextMeshProUGUI playerNameText;
     [SerializeField] TextMeshProUGUI timerText;
     [SerializeField] Image currentPowerUpIcon;
-    private float timer = 1;
+    private const float MAX_TIME = 10;
+    private float timer = MAX_TIME;
     private int currentTurn = 1;
     private bool yourTurn;
     PhotonView view;
@@ -120,7 +121,7 @@ public class PowerUps : MonoBehaviour
         }
         else
         {
-            timer = 1;
+            timer = MAX_TIME;
             currentTurn++;
             Debug.Log(currentTurn);
         }

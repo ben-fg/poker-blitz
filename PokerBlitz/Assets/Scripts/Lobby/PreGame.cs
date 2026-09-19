@@ -15,7 +15,7 @@ public class PreGame : MonoBehaviour
 
     void Start()
     {
-        MinigameSelection.gameNumber = 4;
+        //MinigameSelection.gameNumber = 4;
         view = GetComponent<PhotonView>();
         if (MinigameSelection.gameNumber == 1)
         {

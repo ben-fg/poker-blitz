@@ -4,6 +4,10 @@ using UnityEngine;
 using Photon.Pun;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
 
+/**
+ * Test class that orders players based on actor numbers
+ * All Zappers should be removed before production
+ */
 public class Zapper : MonoBehaviour
 {
     Hashtable playerProperties = new Hashtable();

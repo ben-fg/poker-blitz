@@ -1265,6 +1265,14 @@ public class GameMaster : MonoBehaviourPun
 
         if (PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient)
             BroadcastFinalRanking(cachedFinalRanking);
+
+        /**
+        GameSelector.rankedPlayers = GetFinalRanking();
+        if (PhotonNetwork.LocalPlayer.IsMasterClient)
+        {
+            PhotonNetwork.LoadLevel("GameSelector");
+        }
+        */
     }
 
     // Still-standing players first by current balance, then eliminated players by
