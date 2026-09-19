@@ -674,10 +674,11 @@ public class GameMaster : MonoBehaviourPun
 
     private bool IsBettingRoundComplete()
     {
+        // No early exit for "1 or 0 active players" here on purpose. A lone
+        // remaining player facing someone else's all-in still needs their turn,
+        // the checks below already cover that correctly (and an empty active
+        // list vacuously passes both, so 0 players still falls through to true).
         var active = pokerPlayers.Where(p => !p.IsFolded() && !p.IsAllIn).ToList();
-
-        if (active.Count <= 1)
-            return true;
 
         if (active.Any(p => !p.hasActedThisStreet))
             return false;
@@ -759,26 +760,36 @@ public class GameMaster : MonoBehaviourPun
             case Street.Preflop:
                 currentStreet = Street.Flop;
                 RevealFlop();
-                SetFirstPlayerToActPostFlop();
                 break;
 
             case Street.Flop:
                 currentStreet = Street.Turn;
                 RevealTurn();
-                SetFirstPlayerToActPostFlop();
                 break;
 
             case Street.Turn:
                 currentStreet = Street.River;
                 RevealRiver();
-                SetFirstPlayerToActPostFlop();
                 break;
 
             case Street.River:
                 currentStreet = Street.Showdown;
                 ResolveShowdown();
-                break;
+                return;
         }
+
+        // If everyone left is either folded or all-in, nobody can actually bet
+        // anymore, so there's nothing to wait on. Keep revealing streets straight
+        // through to showdown instead of handing a turn to someone who can't act.
+        if (AnyoneStillNeedsToAct())
+            SetFirstPlayerToActPostFlop();
+        else
+            EndBettingRound();
+    }
+
+    private bool AnyoneStillNeedsToAct()
+    {
+        return pokerPlayers.Count(p => !p.IsFolded() && !p.IsAllIn) > 1;
     }
 
     private void RevealFlop()
