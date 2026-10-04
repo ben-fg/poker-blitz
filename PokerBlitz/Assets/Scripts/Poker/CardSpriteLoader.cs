@@ -22,16 +22,17 @@ public static class CardSpriteLoader
     /// <summary>Returns the sprite for a given card. Returns null if not found.</summary>
     public static Sprite GetSprite(Card card)
     {
+        string cardFolder = GetCardType();
         string denomination = DenominationNames[(int)card.GetDenomination()];
         string suit = SuitNames[(int)card.GetSuit()];
         string spriteName = $"{denomination}_of_{suit}";
 
-        Debug.Log($"Trying to load: Cards/{spriteName}");
+        Debug.Log($"Trying to load: {cardFolder}/{spriteName}");
 
-        Sprite sprite = Resources.Load<Sprite>($"Cards/{spriteName}");
+        Sprite sprite = Resources.Load<Sprite>($"{cardFolder}/{spriteName}");
 
         if (sprite == null)
-            Debug.LogWarning($"[CardSpriteLoader] Could not find sprite: Cards/{spriteName}");
+            Debug.LogWarning($"[CardSpriteLoader] Could not find sprite: {cardFolder}/{spriteName}");
 
         return sprite;
     }
@@ -39,11 +40,21 @@ public static class CardSpriteLoader
     /// <summary>Returns the card back sprite.</summary>
     public static Sprite GetBackSprite()
     {
-        Sprite sprite = Resources.Load<Sprite>("Cards/Back_Card");
+        string cardFolder = GetCardType();
+        Sprite sprite = Resources.Load<Sprite>($"{cardFolder}/Back_Card");
 
         if (sprite == null)
-            Debug.LogWarning("[CardSpriteLoader] Could not find sprite: Cards/Back_Card");
+            Debug.LogWarning($"[CardSpriteLoader] Could not find sprite: {cardFolder}/Back_Card");
 
         return sprite;
+    }
+
+    private static string GetCardType()
+    {
+        if (AccountDetails.cardPreference == "Realistic")
+        {
+            return "Cards";
+        }
+        return "CardsJumbo";
     }
 }
