@@ -42,9 +42,12 @@ public class PowerUps : MonoBehaviour
         Debug.Log("Setting clear 0");
         currentPowerUpIcon.color = Color.clear;
 
+        OrderPlayers();
+        /**
         Zapper propertyZapper = GetComponent<Zapper>();
         //Create an order for mini game testing purposes
         propertyZapper.OrderForTesting();
+        */
 
         if (PhotonNetwork.IsMasterClient)
         {
@@ -54,6 +57,18 @@ public class PowerUps : MonoBehaviour
             };
             PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         }
+    }
+
+    public void OrderPlayers()
+    {
+        for (int i = 1; i < 4; i++)
+        {
+            if (view.IsMine && view.Owner.ActorNumber == GameSelector.rankedPlayers[i].ActorNumber)
+            {
+                playerProperties["Order"] = i;
+            }
+        }
+        PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
     }
 
     void Update()

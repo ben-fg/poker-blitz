@@ -1275,15 +1275,28 @@ public class GameMaster : MonoBehaviourPun
             uiManager.ShowMessage($"{cachedFinalRanking[0].GetName()} finishes 1st!", 10f);
 
         if (PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient)
-            BroadcastFinalRanking(cachedFinalRanking);
-
-        /**
-        GameSelector.rankedPlayers = GetFinalRanking();
-        if (PhotonNetwork.LocalPlayer.IsMasterClient)
         {
-            PhotonNetwork.LoadLevel("GameSelector");
+            GameSelector.rankedPlayers = GetFinalRanking();
+            int nextGameNumber = PickRandomGameNumber();
+            photonView.RPC("RPC_SetGameNumber", RpcTarget.All, nextGameNumber);
+            BroadcastFinalRanking(cachedFinalRanking);
         }
-        */
+    }
+
+    private int PickRandomGameNumber()
+    {
+        int number = Random.Range(1, 4);
+        if (number == 3)
+        {
+            number = 4; //High noon (code 3) is unfinished and Cash grabbers (code 4) is finished.
+        }
+        return number;
+    }
+
+    [PunRPC]
+    private void RPC_SetGameNumber(int number)
+    {
+        MinigameSelection.gameNumber = number;
     }
 
     // Still-standing players first by current balance, then eliminated players by
@@ -1322,6 +1335,8 @@ public class GameMaster : MonoBehaviourPun
         cachedFinalRanking = actorNumbersInOrder.Select(FindPlayerByActor).Where(p => p != null).ToList();
         if (uiManager != null && cachedFinalRanking.Count > 0)
             uiManager.ShowMessage($"{cachedFinalRanking[0].GetName()} finishes 1st!", 10f);
+
+        GameSelector.rankedPlayers = GetFinalRanking();
     }
 
     // ────────────────────────────────────────────────────────────
