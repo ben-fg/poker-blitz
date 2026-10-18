@@ -1296,6 +1296,7 @@ MonoBehaviour:
   playerNameText: {fileID: 4956909855191721989}
   timerText: {fileID: 8841441785820756288}
   currentPowerUpIcon: {fileID: 7694132766723297205}
+  blockedSprite: {fileID: 21300000, guid: 4f83bf63e7ec9444eb3d5b20720aa658, type: 3}
 --- !u!1 &8845319843297324689
 GameObject:
   m_ObjectHideFlags: 0

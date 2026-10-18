@@ -19,6 +19,9 @@ public class PowerUps : MonoBehaviour
     private float timer = MAX_TIME;
     private int currentTurn = 1;
     private bool yourTurn;
+    private int selectedPowerup = -1;
+    private static bool[] blocked = new bool[3];
+    [SerializeField] Sprite blockedSprite;
     PhotonView view;
     private bool sceneIsLoaded;
    
@@ -42,12 +45,12 @@ public class PowerUps : MonoBehaviour
         Debug.Log("Setting clear 0");
         currentPowerUpIcon.color = Color.clear;
 
-        OrderPlayers();
-        /**
+        //OrderPlayers();
+        
         Zapper propertyZapper = GetComponent<Zapper>();
         //Create an order for mini game testing purposes
         propertyZapper.OrderForTesting();
-        */
+        
 
         if (PhotonNetwork.IsMasterClient)
         {
@@ -136,12 +139,32 @@ public class PowerUps : MonoBehaviour
         }
         else
         {
+            if (view.IsMine && currentPlayer.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+            {
+                if (selectedPowerup >= 0)
+                {
+                    Debug.Log(
+                        $"Local player: {PhotonNetwork.LocalPlayer.ActorNumber}, " +
+                        $"Current player: {currentPlayer.ActorNumber}, " +
+                        $"Selected powerup: {selectedPowerup}"
+                    );
+                    view.RPC("BlockPowerups", RpcTarget.AllBuffered, selectedPowerup);
+                }
+            }
             timer = MAX_TIME;
             currentTurn++;
             Debug.Log(currentTurn);
         }
 
         timerText.text = (timer + 0.5).ToString("0");
+
+        for (int i = 0; i < blocked.Length; i++)
+        {
+            if (blocked[i])
+            {
+                powerUpButtons[i].GetComponent<Image>().sprite = blockedSprite;
+            }
+        }
     }
 
     public static void HideUIForRemotePlayers(GameObject remoteObject)
@@ -164,6 +187,21 @@ public class PowerUps : MonoBehaviour
     public void ChangeText(string nickname)
     {
         playerNameText.text = nickname + " select your powerup.";
+    }
+
+    [PunRPC]
+    public void BlockPowerups(int powerupToBlock)
+    {
+        if (powerupToBlock < 0 || powerupToBlock > 2)
+        {
+            Debug.LogWarning("Power up not selected.");
+        }
+        else
+        {
+            Debug.Log(powerupToBlock);
+            blocked[powerupToBlock] = true;
+            Debug.Log(blocked);
+        }
     }
 
     public Sprite GetSprite(int row, int column)
@@ -198,37 +236,40 @@ public class PowerUps : MonoBehaviour
     {
         //Debug.Log((int)PhotonNetwork.LocalPlayer.CustomProperties["Order"]);
         //Debug.Log(currentTurn);
-        if (view.IsMine && yourTurn)
+        if (view.IsMine && yourTurn && !blocked[0])
         {
+            selectedPowerup = 0;
             Debug.Log("Setting white 1");
             playerProperties["PowerUp"] = 1;
             PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
             currentPowerUpIcon.color = Color.white;
-            currentPowerUpIcon.sprite = GetSprite(MinigameSelection.gameNumber - 1, 0);
+            currentPowerUpIcon.sprite = GetSprite(MinigameSelection.gameNumber - 1, selectedPowerup);
         }
     }
 
     public void PowerUp2()
     {
-        if (view.IsMine && yourTurn)
+        if (view.IsMine && yourTurn && !blocked[1])
         {
+            selectedPowerup = 1;
             Debug.Log("Setting white 2");
             playerProperties["PowerUp"] = 2;
             PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
             currentPowerUpIcon.color = Color.white;
-            currentPowerUpIcon.sprite = GetSprite(MinigameSelection.gameNumber - 1, 1);
+            currentPowerUpIcon.sprite = GetSprite(MinigameSelection.gameNumber - 1, selectedPowerup);
         }
     }
 
     public void PowerUp3()
     {
-        if (view.IsMine && yourTurn)
+        if (view.IsMine && yourTurn && !blocked[2])
         {
+            selectedPowerup = 2;
             Debug.Log("Setting white 3");
             playerProperties["PowerUp"] = 3;
             PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
             currentPowerUpIcon.color = Color.white;
-            currentPowerUpIcon.sprite = GetSprite(MinigameSelection.gameNumber - 1, 2);
+            currentPowerUpIcon.sprite = GetSprite(MinigameSelection.gameNumber - 1, selectedPowerup);
         }
     }
 }

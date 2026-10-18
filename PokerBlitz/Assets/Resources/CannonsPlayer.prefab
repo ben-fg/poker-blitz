@@ -1241,7 +1241,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 4ab15be993e9322499f12134df013269, type: 3}
+  m_audioClip: {fileID: 8300000, guid: 9a1d723c3053c694ab7a146bfc129a72, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -4405,6 +4405,7 @@ MonoBehaviour:
   playerNameText: {fileID: 0}
   timerText: {fileID: 0}
   currentPowerUpIcon: {fileID: 0}
+  blockedSprite: {fileID: 0}
 --- !u!1 &8881272661778107323
 GameObject:
   m_ObjectHideFlags: 0
